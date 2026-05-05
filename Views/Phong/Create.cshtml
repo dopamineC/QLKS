@@ -1,0 +1,178 @@
+﻿@model QLKS.Models.Phong
+@using QLKS.Models
+
+@{
+    ViewData["Title"] = "Thêm phòng";
+}
+
+@section Styles {
+    <link rel="stylesheet" href="~/adminlte/css/admin-room-lite.css" asp-append-version="true" />
+}
+
+<div class="content-header">
+    <div class="container-fluid">
+        <div class="d-flex align-items-center justify-content-between">
+            <h1 class="m-0 text-dark">
+                <i class="fas fa-door-open mr-2"></i> Thêm phòng
+            </h1>
+            <a class="btn btn-outline-secondary" asp-action="Index">
+                <i class="fas fa-arrow-left mr-1"></i> Quay lại
+            </a>
+        </div>
+    </div>
+</div>
+
+<section class="content">
+    <div class="container-fluid">
+        <form asp-action="Create" method="post">
+            @Html.AntiForgeryToken()
+
+            <div class="row">
+                <!-- LEFT -->
+                <div class="col-lg-8">
+                    <div class="card card-outline card-primary">
+                        <div class="card-header">
+                            <h3 class="card-title font-weight-bold">
+                                <i class="fas fa-clipboard-list mr-1"></i> Thông tin phòng
+                            </h3>
+                        </div>
+
+                        <div class="card-body">
+                            <div asp-validation-summary="ModelOnly" class="text-danger mb-3"></div>
+
+                            <div class="form-row">
+                                <div class="form-group col-md-6">
+                                    <label class="font-weight-bold">Số phòng</label>
+                                    <input asp-for="SoPhong" class="form-control" placeholder="VD: 101" />
+                                    <span asp-validation-for="SoPhong" class="text-danger small"></span>
+                                </div>
+
+                                <div class="form-group col-md-6">
+                                    <label class="font-weight-bold">Tầng</label>
+                                    <input asp-for="Tang" class="form-control" type="number" min="1" />
+                                    <span asp-validation-for="Tang" class="text-danger small"></span>
+                                </div>
+                            </div>
+
+                            <div class="form-row">
+                                <div class="form-group col-md-6">
+                                    <label class="font-weight-bold">Trạng thái</label>
+                                    <select asp-for="TrangThai" class="form-control"
+                                            asp-items="Html.GetEnumSelectList<TrangThaiPhong>()"></select>
+                                    <span asp-validation-for="TrangThai" class="text-danger small"></span>
+                                </div>
+
+                                <div class="form-group col-md-6">
+                                    <label class="font-weight-bold">Loại phòng</label>
+                                    <select asp-for="LoaiPhongId" class="form-control" asp-items="ViewBag.LoaiPhongId"></select>
+                                    <span asp-validation-for="LoaiPhongId" class="text-danger small"></span>
+                                </div>
+                            </div>
+
+                            <div class="alert alert-light border mb-0">
+                                <i class="fas fa-lightbulb mr-1 text-warning"></i>
+                                Tip: Phòng mới thường để <b>Trống</b>, có khách thì chuyển <b>Đang sử dụng</b>, bảo trì thì chọn <b>Bảo trì</b>.
+                            </div>
+                        </div>
+
+                        <div class="card-footer d-flex justify-content-end">
+                            <button type="submit" class="btn btn-primary mr-2">
+                                <i class="fas fa-save mr-1"></i> Lưu
+                            </button>
+                            <a class="btn btn-outline-secondary" asp-action="Index">Hủy</a>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- RIGHT -->
+                <div class="col-lg-4">
+                    <div class="card card-outline card-info room-preview">
+                        <div class="card-header">
+                            <h3 class="card-title font-weight-bold">
+                                <i class="fas fa-eye mr-1"></i> Xem nhanh
+                            </h3>
+                        </div>
+
+                        <div class="card-body">
+                            <div class="title mb-2">Preview</div>
+
+                            <div class="kv">
+                                <div class="k">Phòng</div>
+                                <div class="v" id="pvSoPhong">—</div>
+                            </div>
+                            <div class="kv">
+                                <div class="k">Tầng</div>
+                                <div class="v" id="pvTang">—</div>
+                            </div>
+                            <div class="kv">
+                                <div class="k">Loại</div>
+                                <div class="v" id="pvLoai">—</div>
+                            </div>
+                            <div class="kv">
+                                <div class="k">Trạng thái</div>
+                                <div class="v">
+                                    <span class="badge badge-success" id="pvTrangThai">Trống</span>
+                                </div>
+                            </div>
+
+                            <div class="mt-3 room-legend">
+                                <div class="font-weight-bold mb-2">Legend</div>
+                                <span class="badge badge-success mr-1">Trống</span>
+                                <span class="badge badge-primary mr-1">Đang sử dụng</span>
+                                <span class="badge badge-warning">Bảo trì</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="callout callout-info">
+                        <h5 class="mb-2"><i class="fas fa-info-circle mr-1"></i> Gợi ý</h5>
+                        Nếu số phòng dạng <b>101</b> thì tầng thường là <b>1</b> (tùy quy ước).
+                    </div>
+                </div>
+            </div>
+        </form>
+    </div>
+</section>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+    <script>
+        (function () {
+            const soPhong = document.getElementById('SoPhong');
+            const tang = document.getElementById('Tang');
+            const loai = document.getElementById('LoaiPhongId');
+            const st = document.getElementById('TrangThai');
+
+            const pvSoPhong = document.getElementById('pvSoPhong');
+            const pvTang = document.getElementById('pvTang');
+            const pvLoai = document.getElementById('pvLoai');
+            const pvTrangThai = document.getElementById('pvTrangThai');
+
+            function badgeClass(text) {
+                const t = (text || '').toLowerCase();
+                if (t.includes('trống')) return 'badge badge-success';
+                if (t.includes('đang')) return 'badge badge-primary';
+                return 'badge badge-warning';
+            }
+
+            function render() {
+                pvSoPhong.textContent = (soPhong?.value || '').trim() || '—';
+                pvTang.textContent = (tang?.value || '').trim() || '—';
+                pvLoai.textContent = loai?.selectedOptions?.[0]?.textContent?.trim() || '—';
+
+                const stText = st?.selectedOptions?.[0]?.textContent?.trim() || '—';
+                pvTrangThai.textContent = stText;
+                pvTrangThai.className = badgeClass(stText);
+            }
+
+            ['input', 'change'].forEach(ev => {
+                soPhong?.addEventListener(ev, render);
+                tang?.addEventListener(ev, render);
+                loai?.addEventListener(ev, render);
+                st?.addEventListener(ev, render);
+            });
+
+            render();
+        })();
+    </script>
+}

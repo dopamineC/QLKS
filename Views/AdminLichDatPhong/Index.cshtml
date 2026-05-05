@@ -1,0 +1,372 @@
+﻿﻿@{
+ViewData["Title"] = " ";
+
+var ctrl = ViewContext.RouteData.Values["controller"]?.ToString();
+var area = ViewContext.RouteData.Values["area"]?.ToString();
+
+var eventsUrl = Url.Action("Events", ctrl, new { area });
+var roomsUrl = Url.Action("PhongOptions", ctrl, new { area });
+var statusUrl = Url.Action("TrangThaiOptions", ctrl, new { area });
+var loaiUrl = Url.Action("LoaiPhongOptions", ctrl, new { area });
+var tangUrl = Url.Action("TangOptions", ctrl, new { area });
+var createUrl = Url.Action("Create", "AdminBooking", new { area });
+}
+
+@section Styles {
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.15/index.global.min.css" />
+    <link rel="stylesheet" href="~/adminlte/css/admin-lichdatphong.css" asp-append-version="true" />
+}
+
+<div class="ldp-wrap">
+    <div class="ldp-card">
+        <!-- Header -->
+        <div class="ldp-header">
+            <div class="ldp-title">
+                <i class="fas fa-calendar-alt"></i>
+                <span>Lịch Đặt Phòng</span>
+            </div>
+            <a class="ldp-btn ldp-btn-primary" href="@createUrl">
+                <i class="fas fa-plus"></i> Tạo Booking
+            </a>
+        </div>
+
+        <!-- Filter (1 hàng) -->
+        <div class="ldp-filter">
+            <div class="ldp-grid">
+                <div class="ldp-field ldp-q">
+                    <i class="fas fa-search"></i>
+                    <input id="qFilter" type="text" placeholder="Tìm số phòng / khách..." />
+                </div>
+
+                <select id="loaiPhongFilter" class="ldp-select">
+                    <option value="">Loại phòng</option>
+                </select>
+
+                <select id="tangFilter" class="ldp-select">
+                    <option value="">Tầng</option>
+                </select>
+
+                <select id="phongFilter" class="ldp-select">
+                    <option value="">Phòng</option>
+                </select>
+
+                <select id="trangThaiFilter" class="ldp-select">
+                    <option value="">Trạng thái</option>
+                </select>
+
+                <div class="ldp-actions">
+                    <button type="button" class="ldp-btn ldp-btn-primary" id="btnApply">
+                        <i class="fas fa-filter"></i> Lọc
+                    </button>
+                    <button type="button" class="ldp-btn ldp-btn-ghost" id="btnReset">
+                        <i class="fas fa-sync-alt"></i> Reset
+                    </button>
+                </div>
+            </div>
+
+            <!-- Legend nổi + result -->
+            <div class="ldp-subrow">
+                <div class="ldp-legend">
+                    <span class="lg lg-green"><i class="dot d-green"></i> Trống</span>
+                    <span class="lg lg-blue"><i class="dot d-blue"></i> Đang ở</span>
+                    <span class="lg lg-yellow"><i class="dot d-yellow"></i> Đã đặt</span>
+                    <span class="lg lg-red"><i class="dot d-red"></i> Hủy/Bảo trì</span>
+                </div>
+                <div class="ldp-result" id="resultInfo"></div>
+            </div>
+        </div>
+
+        <!-- Calendar -->
+        <div class="ldp-body">
+            <div id="calendar"></div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal -->
+<div class="modal fade" id="dpModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content ldp-modal">
+            <div class="modal-header">
+                <h5 class="modal-title"><i class="fas fa-info-circle me-2"></i>Chi tiết đặt phòng</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="dr">
+                    <div class="dl">Phòng</div>
+                    <div class="dv" id="mPhong">-</div>
+                </div>
+                <div class="dr">
+                    <div class="dl">Khách hàng</div>
+                    <div class="dv" id="mKhach">-</div>
+                </div>
+                <div class="dr">
+                    <div class="dl">Thời gian</div>
+                    <div class="dv"><span id="mNhan">-</span> <span class="mx-1 text-muted">→</span> <span id="mTra">-</span></div>
+                </div>
+                <div class="dr">
+                    <div class="dl">Số đêm</div>
+                    <div class="dv"><span id="mDem">-</span></div>
+                </div>
+                <div class="dr">
+                    <div class="dl">Tổng tiền</div>
+                    <div class="dv money" id="mTien">-</div>
+                </div>
+                <div class="dr">
+                    <div class="dl">Trạng thái</div>
+                    <div class="dv"><span id="mTrangThai" class="pill p-yellow">-</span></div>
+                </div>
+            </div>
+            <div class="modal-footer bg-light">
+                <a class="btn btn-info text-white btn-sm" id="mChiTiet" href="#"><i class="fas fa-eye"></i> Xem</a>
+                <a class="btn btn-warning text-white btn-sm" id="mSua" href="#"><i class="fas fa-edit"></i> Sửa</a>
+                <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Đóng</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.15/index.global.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.15/locales-all.global.min.js"></script>
+
+    <script>
+        (function () {
+            const EVENTS_URL = '@eventsUrl';
+            const ROOMS_URL  = '@roomsUrl';
+            const STATUS_URL = '@statusUrl';
+            const LOAI_URL   = '@loaiUrl';
+            const TANG_URL   = '@tangUrl';
+
+            const qFilter = document.getElementById('qFilter');
+            const loaiPhongFilter = document.getElementById('loaiPhongFilter');
+            const tangFilter = document.getElementById('tangFilter');
+            const phongFilter = document.getElementById('phongFilter');
+            const trangThaiFilter = document.getElementById('trangThaiFilter');
+
+            const btnApply = document.getElementById('btnApply');
+            const btnReset = document.getElementById('btnReset');
+            const resultInfo = document.getElementById('resultInfo');
+
+            const dpModalEl = document.getElementById('dpModal');
+            const mPhong = document.getElementById('mPhong');
+            const mKhach = document.getElementById('mKhach');
+            const mNhan = document.getElementById('mNhan');
+            const mTra = document.getElementById('mTra');
+            const mDem = document.getElementById('mDem');
+            const mTien = document.getElementById('mTien');
+            const mTrangThai = document.getElementById('mTrangThai');
+            const mChiTiet = document.getElementById('mChiTiet');
+            const mSua = document.getElementById('mSua');
+
+            let modal = null;
+            try { modal = new bootstrap.Modal(dpModalEl); } catch { }
+
+            function pillClassByStatusKey(key) {
+                if (key === 'green') return 'pill p-green';
+                if (key === 'blue')  return 'pill p-blue';
+                if (key === 'red')   return 'pill p-red';
+                return 'pill p-yellow';
+            }
+
+            async function fetchJson(url) {
+                const res = await fetch(url, { headers: { 'X-Requested-With': 'XMLHttpRequest' } });
+                if (!res.ok) throw new Error('HTTP ' + res.status);
+                return await res.json();
+            }
+
+            function fillSelect(select, items) {
+                const keep = select.options[0]?.outerHTML || '';
+                select.innerHTML = keep;
+                items.forEach(it => {
+                    const opt = document.createElement('option');
+                    opt.value = (it.id ?? it.value ?? '');
+                    opt.textContent = (it.text ?? '');
+                    select.appendChild(opt);
+                });
+            }
+
+            async function loadLoaiPhong() {
+                const ls = await fetchJson(LOAI_URL);
+                fillSelect(loaiPhongFilter, ls);
+            }
+
+            async function loadTang() {
+                const ls = await fetchJson(TANG_URL);
+                fillSelect(tangFilter, ls.map(x => ({ id: x.value, text: x.text })));
+            }
+
+            async function loadTrangThai() {
+                const ls = await fetchJson(STATUS_URL);
+                fillSelect(trangThaiFilter, ls.map(x => ({ id: x.value, text: x.text })));
+            }
+
+            async function loadPhong() {
+                const loai = loaiPhongFilter.value || '';
+                const tang = tangFilter.value || '';
+                const url = `${ROOMS_URL}?loaiPhongId=${encodeURIComponent(loai)}&tang=${encodeURIComponent(tang)}`;
+                const rooms = await fetchJson(url);
+                fillSelect(phongFilter, rooms);
+            }
+
+            function buildQueryParams(info) {
+                const params = new URLSearchParams();
+                params.set('start', info.startStr);
+                params.set('end', info.endStr);
+
+                if (phongFilter.value) params.set('phongId', phongFilter.value);
+                if (loaiPhongFilter.value) params.set('loaiPhongId', loaiPhongFilter.value);
+                if (tangFilter.value) params.set('tang', tangFilter.value);
+                if (trangThaiFilter.value) params.set('trangThai', trangThaiFilter.value);
+                if (qFilter.value.trim()) params.set('q', qFilter.value.trim());
+
+                return params.toString();
+            }
+
+            function updateResult(count) {
+                resultInfo.textContent = (count != null) ? `Đang hiển thị ${count} booking` : '';
+            }
+
+            function openModalFromEvent(ev) {
+                const p = ev.extendedProps || {};
+                mPhong.textContent = p.soPhong ? `Phòng ${p.soPhong}` : '-';
+                mKhach.textContent = p.khachHang || '-';
+                mNhan.textContent = p.ngayNhan || '-';
+                mTra.textContent = p.ngayTra || '-';
+                mDem.textContent = (p.soDem ?? '-');
+                mTien.textContent = p.tongTien || '-';
+
+                mTrangThai.textContent = p.trangThaiText || '-';
+                mTrangThai.className = pillClassByStatusKey(p.trangThaiKey);
+
+                if (p.detailsUrl) mChiTiet.href = p.detailsUrl;
+                if (p.editUrl) mSua.href = p.editUrl;
+
+                modal?.show();
+            }
+
+            function renderSegTitle(arg) {
+                const span = document.createElement('span');
+                span.className = 'ev-title';
+                span.textContent = arg.event.title; // 1 dòng + ellipsis trong CSS
+                return span;
+            }
+
+            let calendar = null;
+
+            async function initCalendar() {
+                const el = document.getElementById('calendar');
+
+                calendar = new FullCalendar.Calendar(el, {
+                    locale: 'vi',
+                    initialView: 'dayGridMonth',
+                    firstDay: 1,
+                    height: 'auto',
+                    expandRows: true,
+
+                    headerToolbar: {
+                        left: 'prev,next today',
+                        center: 'title',
+                        right: 'dayGridMonth,dayGridWeek,dayGridDay,listWeek'
+                    },
+
+                    buttonText: {
+                        today: 'Hôm nay',
+                        month: 'Tháng',
+                        week: 'Tuần',
+                        day: 'Ngày',
+                        list: 'DS'
+                    },
+
+                    events: async (info, successCallback, failureCallback) => {
+                        try {
+                            const qs = buildQueryParams(info);
+                            const url = `${EVENTS_URL}?${qs}`;
+                            const evs = await fetchJson(url);
+                            updateResult(evs.length);
+                            successCallback(evs);
+                        } catch (e) {
+                            failureCallback(e);
+                        }
+                    },
+
+                    eventDidMount: (arg) => {
+                        const p = arg.event.extendedProps || {};
+                        if (p.isConflict) arg.el.classList.add('conflict');
+
+                        // Tooltip content
+                        const tip =
+                            `Phòng: ${p.soPhong ?? ''}\n` +
+                            `Khách: ${p.khachHang ?? ''}\n` +
+                            `Nhận: ${p.ngayNhan ?? ''}\n` +
+                            `Trả: ${p.ngayTra ?? ''}\n` +
+                            `Trạng thái: ${p.trangThaiText ?? ''}`;
+
+                        // tooltip basic
+                        arg.el.setAttribute('title', tip);
+
+                        // bootstrap tooltip (nếu có)
+                        try {
+                            if (window.bootstrap && bootstrap.Tooltip) {
+                                if (!arg.el._bsTooltip) {
+                                    arg.el._bsTooltip = new bootstrap.Tooltip(arg.el, {
+                                        title: tip.replace(/\n/g, '<br/>'),
+                                        html: true,
+                                        placement: 'top',
+                                        container: 'body',
+                                        trigger: 'hover',
+                                        boundary: 'window'
+                                    });
+                                } else {
+                                    arg.el._bsTooltip.setContent({ '.tooltip-inner': tip.replace(/\n/g, '<br/>') });
+                                }
+                            }
+                        } catch { }
+                    },
+
+                    eventClick: (arg) => {
+                        arg.jsEvent.preventDefault();
+                        openModalFromEvent(arg.event);
+                    },
+
+                    eventContent: (arg) => {
+                        return { domNodes: [renderSegTitle(arg)] };
+                    }
+                });
+
+                calendar.render();
+            }
+
+            function bindUi() {
+                btnApply.addEventListener('click', () => calendar.refetchEvents());
+
+                btnReset.addEventListener('click', async () => {
+                    qFilter.value = '';
+                    loaiPhongFilter.value = '';
+                    tangFilter.value = '';
+                    phongFilter.value = '';
+                    trangThaiFilter.value = '';
+                    await loadPhong();
+                    calendar.refetchEvents();
+                });
+
+                loaiPhongFilter.addEventListener('change', loadPhong);
+                tangFilter.addEventListener('change', loadPhong);
+
+                qFilter.addEventListener('keydown', (e) => {
+                    if (e.key === 'Enter') calendar.refetchEvents();
+                });
+            }
+
+            (async function main() {
+                await loadLoaiPhong();
+                await loadTang();
+                await loadTrangThai();
+                await loadPhong();
+
+                await initCalendar();
+                bindUi();
+            })();
+        })();
+    </script>
+}

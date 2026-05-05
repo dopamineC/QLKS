@@ -1,0 +1,195 @@
+﻿@model List<QLKS.Models.Phong>
+@using QLKS.Models
+@{
+    ViewData["Title"] = "Kết quả phòng trống";
+    var vm = ViewBag.VM as QLKS.ViewModels.TimPhongTrongVM;
+    var loaiPhongs = ViewBag.LoaiPhongs as List<LoaiPhong> ?? new();
+
+    var hero = Url.Content("~/redplanet/images/hero_5.jpg");
+    var soDem = (vm == null) ? 0 : (vm.NgayTra.Date - vm.NgayNhan.Date).Days;
+}
+
+<section class="site-hero overlay qlks-hero-mini" style="background-image: url('@hero')">
+    <div class="container">
+        <div class="row site-hero-inner justify-content-center align-items-center">
+            <div class="col-md-10 text-center">
+                <h1 class="heading mb-3">Kết quả tìm phòng</h1>
+                @if (vm != null)
+                {
+                    <p class="lead text-white-50 mb-0">
+                        @vm.NgayNhan.ToString("dd/MM/yyyy") → @vm.NgayTra.ToString("dd/MM/yyyy")
+                        · @soDem đêm
+                        · @Model.Count phòng trống
+                    </p>
+                }
+                else
+                {
+                    <p class="lead text-white-50 mb-0">Danh sách phòng trống phù hợp với điều kiện của bạn.</p>
+                }
+            </div>
+        </div>
+    </div>
+</section>
+
+<section class="section bg-light pt-0 qlks-searchres-section">
+    <div class="container">
+        <div class="row check-availabilty">
+            <div class="block-32 qlks-card qlks-card--lift" data-aos="fade-up" data-aos-offset="-200">
+                <form asp-action="Search" method="post" class="qlks-search-v2">
+                    @Html.AntiForgeryToken()
+
+                    <div class="row align-items-end">
+
+                        <div class="col-md-6 col-lg-3 mb-3 mb-lg-0">
+                            <label class="qlks-label">Ngày nhận</label>
+                            <div class="field-icon-wrap">
+                                <div class="icon"><span class="icon-calendar"></span></div>
+                                <input type="date" class="form-control" name="NgayNhan"
+                                       value="@(vm?.NgayNhan.ToString("yyyy-MM-dd") ?? "")" />
+                            </div>
+                        </div>
+
+                        <div class="col-md-6 col-lg-3 mb-3 mb-lg-0">
+                            <label class="qlks-label">Ngày trả</label>
+                            <div class="field-icon-wrap">
+                                <div class="icon"><span class="icon-calendar"></span></div>
+                                <input type="date" class="form-control" name="NgayTra"
+                                       value="@(vm?.NgayTra.ToString("yyyy-MM-dd") ?? "")" />
+                            </div>
+                        </div>
+
+                        <div class="col-md-6 col-lg-3 mb-3 mb-lg-0">
+                            <label class="qlks-label">Loại phòng</label>
+                            <div class="field-icon-wrap">
+                                <div class="icon"><span class="ion-ios-arrow-down"></span></div>
+                                <select class="form-control" name="LoaiPhongId">
+                                    <option value="">-- Tất cả --</option>
+
+                                    @foreach (var lp in loaiPhongs)
+                                    {
+                                        if (vm?.LoaiPhongId == lp.Id)
+                                        {
+                                            <option value="@lp.Id" selected="selected">@lp.TenLoai</option>
+                                        }
+                                        else
+                                        {
+                                            <option value="@lp.Id">@lp.TenLoai</option>
+                                        }
+                                    }
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="col-md-6 col-lg-2 mb-3 mb-lg-0">
+                            <label class="qlks-label">Số người</label>
+                            <div class="field-icon-wrap">
+                                <div class="icon"><span class="ion-ios-arrow-down"></span></div>
+                                <select class="form-control" name="SoNguoi">
+                                    <option value="">-- Bất kỳ --</option>
+
+                                    @for (int i = 1; i <= 10; i++)
+                                    {
+                                        if (vm?.SoNguoi == i)
+                                        {
+                                            <option value="@i" selected="selected">@i</option>
+                                        }
+                                        else
+                                        {
+                                            <option value="@i">@i</option>
+                                        }
+                                    }
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="col-12 col-lg-1 mt-3 mt-lg-0 d-flex flex-column">
+                            <label class="qlks-label qlks-ghost"> </label>
+                            <button class="btn btn-danger rounded-pill w-100 qlks-btn">Lọc</button>
+                        </div>
+
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</section>
+
+<section class="section">
+    <div class="container">
+
+        @if (!Model.Any())
+        {
+            <div class="qlks-empty">
+                <h4 class="mb-2">Không có phòng trống phù hợp</h4>
+                <div class="text-muted mb-3">Thử đổi ngày hoặc loại phòng / số người nha.</div>
+                <a class="btn btn-primary" asp-action="Search">Quay lại tìm phòng</a>
+            </div>
+        }
+        else
+        {
+            <div class="row">
+                @foreach (var p in Model)
+                {
+                    var img = !string.IsNullOrWhiteSpace(p.LoaiPhong?.HinhAnh)
+                        ? Url.Content(p.LoaiPhong.HinhAnh)
+                        : Url.Content("~/redplanet/images/img_1.jpg");
+
+                    <div class="col-md-6 col-lg-4 mb-4" data-aos="fade-up">
+                        <div class="qlks-room-card">
+                            <div class="qlks-room-img" style="background-image:url('@img')"></div>
+
+                            <div class="p-3">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <h5 class="mb-0">Phòng @p.SoPhong</h5>
+                                    <span class="badge bg-light border">#@p.Id</span>
+                                </div>
+
+                                <div class="text-muted small mt-2">
+                                    @p.LoaiPhong?.TenLoai
+                                </div>
+
+                                <div class="qlks-meta">
+                                    <span class="qlks-chip">@((p.LoaiPhong?.SoNguoi ?? 0)) người</span>
+                                    <span class="qlks-chip">@string.Format("{0:N0}", p.LoaiPhong?.GiaMoiDem) VND/đêm</span>
+                                    @if (soDem > 0)
+                                    {
+                                        <span class="qlks-chip">~ @string.Format("{0:N0}", soDem * (p.LoaiPhong?.GiaMoiDem ?? 0)) VND</span>
+                                    }
+                                </div>
+
+                                <div class="mt-3">
+                                    <a class="btn btn-outline-secondary btn-sm mr-2 mb-2"
+                                       asp-controller="LoaiPhongPublic"
+                                       asp-action="Details"
+                                       asp-route-id="@p.LoaiPhongId">
+                                        Xem loại phòng
+                                    </a>
+
+                                    @if (User.Identity?.IsAuthenticated == true && vm != null)
+                                    {
+                                        <a class="btn btn-success btn-sm mb-2"
+                                           asp-action="Create"
+                                           asp-route-phongId="@p.Id"
+                                           asp-route-ngayNhan="@vm.NgayNhan.ToString("yyyy-MM-dd")"
+                                           asp-route-ngayTra="@vm.NgayTra.ToString("yyyy-MM-dd")">
+                                            Đặt phòng
+                                        </a>
+                                    }
+                                    else
+                                    {
+                                        <a class="btn btn-primary btn-sm mb-2"
+                                           asp-controller="Account"
+                                           asp-action="Login"
+                                           asp-route-returnUrl="@Url.Action("Search", "Booking")">
+                                            Đăng nhập để đặt
+                                        </a>
+                                    }
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                }
+            </div>
+        }
+    </div>
+</section>

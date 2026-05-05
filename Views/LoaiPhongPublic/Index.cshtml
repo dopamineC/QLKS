@@ -1,0 +1,48 @@
+﻿@model List<QLKS.Models.LoaiPhong>
+@{
+    ViewData["Title"] = "Loại phòng";
+    var hero = Url.Content("~/redplanet/images/hero_5.jpg");
+}
+
+<!-- INDEX_V2_OK -->
+
+<section class="site-hero overlay qlks-hero-mini" style="background-image: url('@hero')">
+    <div class="container">
+        <div class="row site-hero-inner justify-content-center align-items-center">
+            <div class="col-md-10 text-center">
+                <h1 class="heading mb-3">Loại phòng</h1>
+                <p class="lead text-white-50 mb-0">Chọn loại phòng phù hợp và xem chi tiết.</p>
+            </div>
+        </div>
+    </div>
+</section>
+
+<section class="section" id="section-rooms">
+    <div class="container">
+        <div class="row">
+            @foreach (var lp in Model)
+            {
+                var img = string.IsNullOrWhiteSpace(lp.HinhAnh)
+                ? Url.Content("~/redplanet/images/img_1.jpg")
+                : Url.Content(lp.HinhAnh);
+
+                <div class="col-md-6 col-lg-4" data-aos="fade-up">
+                    <a asp-action="Details" asp-route-id="@lp.Id" class="room">
+                        <figure class="img-wrap">
+                            <img src="@img" alt="@lp.TenLoai" class="img-fluid mb-3"
+                                 style="height:220px;object-fit:cover;border-radius:10px;">
+                        </figure>
+                        <div class="p-3 text-center room-info">
+                            <h2 class="mb-2">@lp.TenLoai</h2>
+                            <div class="small text-muted mb-2">@lp.SoNguoi người</div>
+                            <span class="text-uppercase letter-spacing-1 d-block mb-3">
+                                @string.Format("{0:N0}", lp.GiaMoiDem) VND / đêm
+                            </span>
+                            <span class="btn btn-outline-primary btn-sm">Xem chi tiết</span>
+                        </div>
+                    </a>
+                </div>
+            }
+        </div>
+    </div>
+</section>

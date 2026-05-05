@@ -1,0 +1,161 @@
+﻿@model IEnumerable<QLKS.Models.DatPhong>
+@using QLKS.Models
+@using System.Globalization
+
+@{
+    ViewData["Title"] = "Đơn đặt của tôi";
+    var today = DateTime.Today;
+
+    var vi = CultureInfo.GetCultureInfo("vi-VN");
+    string DateFmt(DateTime d) => d.ToString("dd/MM/yyyy", vi);
+    string DateTimeFmt(DateTime d) => d.ToLocalTime().ToString("dd/MM/yyyy HH:mm", vi);
+
+    string TrangThaiText(TrangThaiDatPhong st) => st switch
+    {
+        TrangThaiDatPhong.DaDat => "Đã đặt",
+        TrangThaiDatPhong.DaNhanPhong => "Đã nhận phòng",
+        TrangThaiDatPhong.DaTraPhong => "Đã trả phòng",
+        TrangThaiDatPhong.DaHuy => "Đã huỷ",
+        _ => st.ToString()
+    };
+
+    string TrangThaiClass(TrangThaiDatPhong st) => st switch
+    {
+        TrangThaiDatPhong.DaDat => "st-blue",
+        TrangThaiDatPhong.DaNhanPhong => "st-green",
+        TrangThaiDatPhong.DaTraPhong => "st-slate",
+        TrangThaiDatPhong.DaHuy => "st-red",
+        _ => "st-slate"
+    };
+
+    bool CoTheHuy(DatPhong dp)
+    {
+        if (dp.TrangThai != TrangThaiDatPhong.DaDat) return false;
+        return (dp.NgayNhanPhong.Date - today).TotalDays >= 1;
+    }
+
+    string Money(decimal x) => string.Format("{0:N0}", x);
+}
+
+@section Styles {
+    <link rel="stylesheet" href="~/redplanet/css/qlks-bookings.css" asp-append-version="true" />
+}
+
+<section class="qlks-bookings">
+    <div class="container">
+
+        <div class="qlks-bookings-head" data-aos="fade-up">
+            <div>
+                <div class="qlks-kicker">MY BOOKINGS</div>
+                <h1 class="qlks-title">Đơn đặt của tôi</h1>
+                <div class="qlks-sub">Xem lịch đặt phòng, trạng thái và thao tác nhanh.</div>
+            </div>
+
+            <div class="qlks-head-actions">
+                <a class="btn btn-outline-primary qlks-btn-pill" asp-controller="Booking" asp-action="Search">
+                    <span class="fa fa-search mr-2"></span>Tìm phòng
+                </a>
+            </div>
+        </div>
+
+        @if (Model == null || !Model.Any())
+        {
+            <div class="qlks-empty" data-aos="fade-up">
+                <div class="qlks-empty-ico">
+                    <span class="fa fa-calendar"></span>
+                </div>
+                <h3>Chưa có đơn đặt nào</h3>
+                <p>Hãy chọn ngày và tìm phòng trống để đặt phòng đầu tiên.</p>
+                <a class="btn btn-primary qlks-btn-pill" asp-controller="Booking" asp-action="Search">
+                    Đặt phòng ngay
+                </a>
+            </div>
+        }
+        else
+        {
+            <div class="qlks-bookings-grid" data-aos="fade-up" data-aos-delay="80">
+                @foreach (var b in Model.OrderByDescending(x => x.NgayDat))
+                {
+                    var phong = b.Phong;
+                    var soPhong = phong?.SoPhong ?? "—";
+                    var tenLoai = phong?.LoaiPhong?.TenLoai ?? "Phòng";
+
+                    var img = string.IsNullOrWhiteSpace(phong?.LoaiPhong?.HinhAnh)
+                    ? Url.Content("~/redplanet/images/img_1.jpg")
+                    : Url.Content(phong!.LoaiPhong!.HinhAnh!);
+
+                    var canCancel = CoTheHuy(b);
+
+                    <article class="bk-card">
+                        <div class="bk-thumb">
+                            <img src="@img" alt="Room @soPhong" />
+                        </div>
+
+                        <div class="bk-body">
+                            <div class="bk-top">
+                                <div class="bk-id">
+                                    <span class="bk-label">Booking</span>
+                                    <span class="bk-num">#@b.Id</span>
+                                </div>
+
+                                <span class="bk-status @TrangThaiClass(b.TrangThai)">
+                                    @TrangThaiText(b.TrangThai)
+                                </span>
+                            </div>
+
+                            <div class="bk-room">
+                                <div class="bk-room-main">Phòng <b>@soPhong</b> · <span>@tenLoai</span></div>
+                                <div class="bk-dates">
+                                    <span class="fa fa-calendar mr-1"></span>
+                                    @DateFmt(b.NgayNhanPhong)
+                                    <span class="mx-1">→</span>
+                                    @DateFmt(b.NgayTraPhong)
+                                    <span class="bk-dot">•</span>
+                                    <b>@b.SoDem</b> đêm
+                                </div>
+                            </div>
+
+                            <div class="bk-meta">
+                                <div class="bk-meta-item">
+                                    <div class="bk-meta-k">Ngày đặt</div>
+                                    <div class="bk-meta-v">@DateTimeFmt(b.NgayDat)</div>
+                                </div>
+                                <div class="bk-meta-item">
+                                    <div class="bk-meta-k">Tổng tiền</div>
+                                    <div class="bk-meta-v bk-money">@Money(b.TongTien) VND</div>
+                                </div>
+                            </div>
+
+                            <div class="bk-actions">
+                                <a class="btn btn-sm btn-primary bk-btn"
+                                   asp-controller="Booking" asp-action="Details" asp-route-id="@b.Id">
+                                    <span class="fa fa-eye mr-1"></span>Chi tiết
+                                </a>
+
+                                @if (canCancel)
+                                {
+                                    <form asp-controller="Booking" asp-action="Cancel" asp-route-id="@b.Id"
+                                          method="post" class="bk-cancel-form">
+                                        @Html.AntiForgeryToken()
+                                        <button type="submit" class="btn btn-sm btn-outline-danger bk-btn"
+                                                onclick="return confirm('Bạn chắc chắn muốn huỷ booking #@b.Id ?');">
+                                            <span class="fa fa-times mr-1"></span>Huỷ
+                                        </button>
+                                    </form>
+                                }
+                                else
+                                {
+                                    <div class="bk-note">
+                                        <span class="fa fa-info-circle mr-1"></span>
+                                        Không thể huỷ.
+                                    </div>
+                                }
+                            </div>
+                        </div>
+                    </article>
+                }
+            </div>
+        }
+
+    </div>
+</section>

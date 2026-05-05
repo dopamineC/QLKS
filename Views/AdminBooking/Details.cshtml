@@ -1,0 +1,178 @@
+@model QLKS.Models.DatPhong
+@using QLKS.Models
+@using QLKS.Helpers
+@using System.Globalization
+
+@{
+    ViewData["Title"] = "";
+    var hd = Model.HoaDon;
+    var vi = CultureInfo.GetCultureInfo("vi-VN");
+
+    string Money(decimal v) => v.ToString("#,0", vi);
+    string DateFmt(DateTime d) => d.ToString("dd/MM/yyyy", vi);
+
+    string BookingPill(TrangThaiDatPhong st) => st switch
+    {
+        TrangThaiDatPhong.DaDat => "pill b-blue",
+        TrangThaiDatPhong.DaNhanPhong => "pill b-green",
+        TrangThaiDatPhong.DaTraPhong => "pill b-gray",
+        _ => "pill b-red"
+    };
+
+    string InvoicePill(TrangThaiHoaDon st) => st switch
+    {
+        TrangThaiHoaDon.DaThanhToan => "pill b-green",
+        TrangThaiHoaDon.ChuaThanhToan => "pill b-blue",
+        _ => "pill b-red"
+    };
+}
+
+<div class="mgr-wrap invoice-wrap invoice-full booking-wrap crud-page">
+    <div class="mgr-head booking-topbar">
+        <h2 class="booking-heading">
+            <i class="fas fa-receipt"></i>
+            <span>Chi tiết đặt phòng #@Model.Id</span>
+        </h2>
+
+        <div class="rt-top-actions">
+            <a class="btnx" asp-action="Edit" asp-route-id="@Model.Id" title="Sửa">
+                <i class="fas fa-edit"></i> Sửa
+            </a>
+            <a class="btnx" asp-action="Delete" asp-route-id="@Model.Id" title="Xóa">
+                <i class="fas fa-trash"></i> Xóa
+            </a>
+            <a class="btnx" asp-action="Index" title="Quay lại">
+                <i class="fas fa-arrow-left"></i> Quay lại
+            </a>
+        </div>
+    </div>
+
+    <div class="crud-body">
+        <div class="crud-grid">
+            <!-- LEFT -->
+            <div class="crud-card">
+                <div class="crud-card-hd">
+                    <h3 class="ttl"><i class="fas fa-clipboard-check"></i> Thông tin đặt phòng</h3>
+                    <span class="@BookingPill(Model.TrangThai)">@Model.TrangThai.GetDisplayName()</span>
+                </div>
+
+                <div class="crud-card-bd">
+                    <div class="kv">
+                        <div class="k">Khách</div>
+                        <div class="v">@Model.KhachHang?.HoTen <span class="hint">(@Model.KhachHang?.TenDangNhap)</span></div>
+
+                        <div class="k">Phòng</div>
+                        <div class="v">@Model.Phong?.SoPhong <span class="hint">— @Model.Phong?.LoaiPhong?.TenLoai</span></div>
+
+                        <div class="k">Ngày nhận</div>
+                        <div class="v">@DateFmt(Model.NgayNhanPhong)</div>
+
+                        <div class="k">Ngày trả</div>
+                        <div class="v">@DateFmt(Model.NgayTraPhong)</div>
+
+                        <div class="k">Số đêm</div>
+                        <div class="v">@Model.SoDem</div>
+
+                        <div class="k">Tổng tiền</div>
+                        <div class="v">@Money(Model.TongTien) đ</div>
+                    </div>
+
+                    <div class="sep"></div>
+
+                    <div class="hint">
+                        <i class="fas fa-clock me-1"></i>
+                        Ngày đặt: @Model.NgayDat.ToLocalTime().ToString("dd/MM/yyyy HH:mm", vi)
+                    </div>
+                </div>
+            </div>
+
+            <!-- RIGHT -->
+            <div class="crud-card">
+                <div class="crud-card-hd">
+                    <h3 class="ttl"><i class="fas fa-file-invoice-dollar"></i> Hóa đơn</h3>
+                    @if (hd != null)
+                    {
+                        <span class="@InvoicePill(hd.TrangThai)">@hd.TrangThai.GetDisplayName()</span>
+                    }
+                    else
+                    {
+                        <span class="pill b-red">Không có</span>
+                    }
+                </div>
+
+                <div class="crud-card-bd">
+                    @if (hd == null)
+                    {
+                        <div class="danger-box">
+                            Booking này chưa có hóa đơn.
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="kv">
+                            <div class="k">Mã HĐ</div>
+                            <div class="v">#@hd.Id</div>
+
+                            <div class="k">Số tiền</div>
+                            <div class="v">@Money(hd.SoTien) đ</div>
+
+                            <div class="k">Phương thức</div>
+                            <div class="v">@hd.PhuongThuc.GetDisplayName()</div>
+
+                            <div class="k">Ngày TT</div>
+                            <div class="v">@((hd.NgayThanhToan.HasValue) ? DateFmt(hd.NgayThanhToan.Value) : "—")</div>
+                        </div>
+
+                        <div class="sep"></div>
+
+                        <div class="hint">
+                            <i class="fas fa-info-circle me-1"></i>
+                            Khi <b>check-out</b>, hệ thống sẽ chuyển hóa đơn sang <b>Đã thanh toán</b>.
+                        </div>
+                    }
+
+                    <div class="sep"></div>
+
+                    <!-- Quick actions -->
+                    <div class="d-flex flex-column gap-2">
+                        @if (Model.TrangThai == TrangThaiDatPhong.DaDat)
+                        {
+                            <form asp-action="CheckIn" method="post">
+                                @Html.AntiForgeryToken()
+                                <input type="hidden" name="id" value="@Model.Id" />
+                                <button class="btn btn-success w-100" type="submit">
+                                    <i class="fas fa-sign-in-alt me-1"></i> Check-in
+                                </button>
+                            </form>
+                            <div class="hint">Chỉ check-in khi đến ngày nhận phòng.</div>
+                        }
+                        else if (Model.TrangThai == TrangThaiDatPhong.DaNhanPhong)
+                        {
+                            <form asp-action="CheckOut" method="post" class="d-grid gap-2">
+                                @Html.AntiForgeryToken()
+                                <input type="hidden" name="id" value="@Model.Id" />
+
+                                <label class="form-label mb-0">Phương thức thanh toán</label>
+                                <select class="form-select" name="phuongThuc">
+                                    @foreach (var it in Html.GetEnumSelectList<PhuongThucThanhToan>())
+                                    {
+                                        <option value="@it.Value">@it.Text</option>
+                                    }
+                                </select>
+
+                                <button class="btn btn-primary" type="submit">
+                                    <i class="fas fa-sign-out-alt me-1"></i> Check-out & Thanh toán
+                                </button>
+                            </form>
+                        }
+                        else
+                        {
+                            <div class="hint">Booking đã kết thúc hoặc đã hủy.</div>
+                        }
+                    </div>
+
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

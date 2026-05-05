@@ -1,0 +1,342 @@
+﻿@model List<QLKS.Models.Phong>
+@using QLKS.Models
+@using QLKS.Helpers
+@using System.Linq
+
+@{
+    ViewData["Title"] = "";
+
+    var loaiPhongs = ViewBag.LoaiPhongs as List<LoaiPhong> ?? new List<LoaiPhong>();
+
+    string? q0 = ViewBag.Q as string;
+
+    int? loaiSel = null;
+    TrangThaiPhong? stSelEnum = null;
+
+    try { loaiSel = (int?)ViewBag.LoaiPhongId; } catch { loaiSel = null; }
+    try { stSelEnum = (TrangThaiPhong?)ViewBag.TrangThai; } catch { stSelEnum = null; }
+
+    int? stSel = stSelEnum.HasValue ? (int)stSelEnum.Value : (int?)null;
+
+    // KPI
+    var total = Model?.Count ?? 0;
+    var cTrong = Model.Count(x => x.TrangThai == TrangThaiPhong.Trong);
+    var cDang = Model.Count(x => x.TrangThai == TrangThaiPhong.DangSuDung);
+    var cBao = Model.Count(x => x.TrangThai == TrangThaiPhong.BaoTri);
+}
+
+@section Styles {
+    <link rel="stylesheet" href="~/adminlte/css/admin-room.css" asp-append-version="true" />
+}
+
+<div class="mgr-wrap invoice-wrap invoice-full room-wrap">
+
+    <!-- Topbar + KPI chips (giống invoice/booking) -->
+    <div class="mgr-head room-topbar">
+        <h2 class="room-heading">
+            <i class="fas fa-door-open"></i>
+            <span>Quản lý phòng</span>
+        </h2>
+
+        <div class="mgr-kpis kpis-inline" id="kpiChips">
+            <button type="button" class="chip chip-btn" data-kpi="all" title="Xem tất cả">
+                <span class="dot" style="background:#212529"></span> Tổng: @total
+            </button>
+
+            <button type="button" class="chip chip-btn" data-kpi="trong" data-st="@((int)TrangThaiPhong.Trong)" title="Lọc: Trống">
+                <span class="dot" style="background:#198754"></span> Trống: @cTrong
+            </button>
+
+            <button type="button" class="chip chip-btn" data-kpi="dang" data-st="@((int)TrangThaiPhong.DangSuDung)" title="Lọc: Đang sử dụng">
+                <span class="dot" style="background:#0d6efd"></span> Đang SD: @cDang
+            </button>
+
+            <button type="button" class="chip chip-btn" data-kpi="baotri" data-st="@((int)TrangThaiPhong.BaoTri)" title="Lọc: Bảo trì">
+                <span class="dot" style="background:#f0ad00"></span> Bảo trì: @cBao
+            </button>
+        </div>
+    </div>
+
+    <!-- Toolbar filter (1 hàng như invoice/booking) -->
+    <div class="mgr-toolbar invoice-toolbar room-toolbar">
+
+        <select id="pageSize" class="inv-select inv-mini" title="Hiển thị">
+            <option value="999999" selected>Hiển thị tất cả</option>
+            <option value="10">Hiển thị 10</option>
+            <option value="25">Hiển thị 25</option>
+            <option value="50">Hiển thị 50</option>
+            <option value="100">Hiển thị 100</option>
+        </select>
+
+        <input id="qFilter" class="inv-search" type="text" value="@q0"
+               placeholder="Tìm (số phòng / tầng / loại)..." />
+
+        <select id="typeFilter" class="inv-select" title="Loại phòng">
+            <option value="">-- Loại phòng --</option>
+            @foreach (var lp in loaiPhongs)
+            {
+                <option value="@lp.Id" selected="@(loaiSel.HasValue && loaiSel.Value == lp.Id ? "selected" : (string?)null)">
+                    @lp.TenLoai
+                </option>
+            }
+        </select>
+
+        <select id="statusFilter" class="inv-select" title="Trạng thái">
+            <option value="">-- Trạng thái --</option>
+            @foreach (var st in Enum.GetValues(typeof(TrangThaiPhong)).Cast<TrangThaiPhong>())
+            {
+                var v = (int)st;
+                <option value="@v" selected="@(stSel.HasValue && stSel.Value == v ? "selected" : (string?)null)">
+                    @st.GetDisplayName()
+                </option>
+            }
+        </select>
+
+        <select id="sortBy" class="inv-select inv-sort" title="Sắp xếp">
+            <option value="room_asc" selected>Số phòng A→Z</option>
+            <option value="room_desc">Số phòng Z→A</option>
+            <option value="floor_asc">Tầng thấp→cao</option>
+            <option value="floor_desc">Tầng cao→thấp</option>
+            <option value="price_desc">Giá cao→thấp</option>
+            <option value="price_asc">Giá thấp→cao</option>
+        </select>
+
+        <div class="muted" id="resultInfo"></div>
+
+        <div class="toolbar-right">
+            <a class="btnx primary" asp-action="Create" title="Thêm phòng">
+                <i class="fas fa-plus"></i> Thêm phòng
+            </a>
+            <button class="btnx" type="button" id="btnReset" title="Reset">Reset</button>
+        </div>
+    </div>
+
+    <!-- Table (mgr-table giống invoice/booking) -->
+    <div class="mgr-table-scroll">
+        <table class="mgr-table" id="tblRooms">
+            <thead>
+                <tr>
+                    <th style="width:70px;">#</th>
+                    <th style="width:110px;">Số phòng</th>
+                    <th style="width:90px;">Tầng</th>
+                    <th class="col-type">Loại phòng</th>
+                    <th style="width:120px;">Số người</th>
+                    <th style="width:150px;" class="money">Giá/đêm</th>
+                    <th style="width:150px;">Trạng thái</th>
+                    <th style="width:180px;" class="col-actions">Thao tác</th>
+                </tr>
+            </thead>
+
+            <tbody>
+                @{
+                    var idx = 0;
+                }
+
+                @if (Model == null || !Model.Any())
+                {
+                    <tr>
+                        <td colspan="8" style="padding:18px; font-weight:800; color:#666; text-align:center;">
+                            Không có dữ liệu phòng.
+                        </td>
+                    </tr>
+                }
+                else
+                {
+                    foreach (var p in Model)
+                    {
+                        idx++;
+
+                        var lp = p.LoaiPhong;
+                        var gia = lp?.GiaMoiDem ?? 0;
+                        var soNguoi = lp?.SoNguoi ?? 0;
+                        var tenLoai = lp?.TenLoai ?? "-";
+
+                        var searchKey = ($"{p.SoPhong} {p.Tang} {tenLoai} {soNguoi} {gia}")
+                        .ToLowerInvariant();
+
+                        string pillClass =
+                        p.TrangThai == TrangThaiPhong.Trong ? "pill r-green" :
+                        p.TrangThai == TrangThaiPhong.DangSuDung ? "pill r-blue" :
+                        "pill r-yellow";
+
+                        <tr class="room-row"
+                            data-id="@p.Id"
+                            data-room="@p.SoPhong"
+                            data-floor="@p.Tang"
+                            data-type="@p.LoaiPhongId"
+                            data-status="@((int)p.TrangThai)"
+                            data-price="@gia"
+                            data-search="@searchKey">
+
+                            <td>@idx</td>
+
+                            <td class="room-no"><b>@p.SoPhong</b></td>
+                            <td>@p.Tang</td>
+
+                            <td class="col-type">
+                                <div class="room-cell">
+                                    <div class="room-name">@tenLoai</div>
+                                    <div class="room-sub">Mã: <b>@p.Id</b></div>
+                                </div>
+                            </td>
+
+                            <td><b>@soNguoi</b></td>
+
+                            <td class="money">@string.Format("{0:N0}", gia)</td>
+
+                            <td><span class="@pillClass">@p.TrangThai.GetDisplayName()</span></td>
+
+                            <td class="col-actions">
+                                <div class="room-actions-grid">
+                                    <a class="iconbtn" asp-action="Details" asp-route-id="@p.Id" title="Xem">
+                                        <i class="fas fa-eye"></i>
+                                    </a>
+                                    <a class="iconbtn i-edit" asp-action="Edit" asp-route-id="@p.Id" title="Sửa">
+                                        <i class="fas fa-pen"></i>
+                                    </a>
+                                    <a class="iconbtn i-del" asp-action="Delete" asp-route-id="@p.Id" title="Xóa">
+                                        <i class="fas fa-trash"></i>
+                                    </a>
+                                </div>
+                            </td>
+                        </tr>
+                    }
+                }
+            </tbody>
+        </table>
+    </div>
+
+</div>
+
+<script>
+    (function () {
+        const tbl = document.getElementById('tblRooms');
+        const tbody = tbl.querySelector('tbody');
+        const rows = Array.from(tbody.querySelectorAll('tr.room-row'));
+
+        const pageSize = document.getElementById('pageSize');
+        const qFilter = document.getElementById('qFilter');
+        const typeFilter = document.getElementById('typeFilter');
+        const statusFilter = document.getElementById('statusFilter');
+        const sortBy = document.getElementById('sortBy');
+        const btnReset = document.getElementById('btnReset');
+        const kpiChips = document.getElementById('kpiChips');
+        const resultInfo = document.getElementById('resultInfo');
+
+        function toNum(v) {
+            const n = parseFloat(String(v || '').replace(',', '.'));
+            return isNaN(n) ? 0 : n;
+        }
+
+        function roomKey(s) {
+            // phòng thường là số "101", "202"... -> ưu tiên parseInt, fallback string
+            const t = (s || '').trim();
+            const n = parseInt(t, 10);
+            return isNaN(n) ? t.toLowerCase() : n;
+        }
+
+        function getFiltered() {
+            const q = (qFilter.value || '').trim().toLowerCase();
+            const type = typeFilter.value;
+            const st = statusFilter.value;
+
+            let filtered = rows.filter(r => {
+                if (q) {
+                    const hay = (r.getAttribute('data-search') || '');
+                    if (!hay.includes(q)) return false;
+                }
+                if (type) {
+                    if (String(r.getAttribute('data-type')) !== String(type)) return false;
+                }
+                if (st) {
+                    if (String(r.getAttribute('data-status')) !== String(st)) return false;
+                }
+                return true;
+            });
+
+            // sort
+            const s = sortBy.value || 'room_asc';
+            filtered.sort((a, b) => {
+                if (s === 'room_desc') {
+                    const ka = roomKey(a.getAttribute('data-room'));
+                    const kb = roomKey(b.getAttribute('data-room'));
+                    return (ka < kb) ? 1 : (ka > kb ? -1 : 0);
+                }
+                if (s === 'floor_asc') return toNum(a.getAttribute('data-floor')) - toNum(b.getAttribute('data-floor'));
+                if (s === 'floor_desc') return toNum(b.getAttribute('data-floor')) - toNum(a.getAttribute('data-floor'));
+                if (s === 'price_desc') return toNum(b.getAttribute('data-price')) - toNum(a.getAttribute('data-price'));
+                if (s === 'price_asc') return toNum(a.getAttribute('data-price')) - toNum(b.getAttribute('data-price'));
+
+                // default room_asc
+                const ka = roomKey(a.getAttribute('data-room'));
+                const kb = roomKey(b.getAttribute('data-room'));
+                return (ka > kb) ? 1 : (ka < kb ? -1 : 0);
+            });
+
+            return filtered;
+        }
+
+        function render() {
+            const filtered = getFiltered();
+            const size = parseInt(pageSize.value || '999999', 10);
+            const show = filtered.slice(0, isNaN(size) ? filtered.length : size);
+
+            rows.forEach(r => r.style.display = 'none');
+
+            show.forEach(r => {
+                r.style.display = '';
+                tbody.appendChild(r);
+            });
+
+            // reindex cột #
+            let idx = 1;
+            rows.forEach(r => {
+                if (r.style.display !== 'none') {
+                    r.children[0].textContent = idx++;
+                }
+            });
+
+            if (resultInfo) {
+                resultInfo.textContent = `Đang hiển thị: ${show.length}/${filtered.length}`;
+            }
+        }
+
+        function resetAll() {
+            qFilter.value = '';
+            typeFilter.value = '';
+            statusFilter.value = '';
+            sortBy.value = 'room_asc';
+            pageSize.value = '999999';
+            render();
+        }
+
+        // events
+        qFilter.addEventListener('input', render);
+        typeFilter.addEventListener('change', render);
+        statusFilter.addEventListener('change', render);
+        sortBy.addEventListener('change', render);
+        pageSize.addEventListener('change', render);
+        btnReset.addEventListener('click', resetAll);
+
+        // chip quick filter
+        if (kpiChips) {
+            kpiChips.addEventListener('click', (e) => {
+                const btn = e.target.closest('.chip-btn');
+                if (!btn) return;
+
+                const k = btn.getAttribute('data-kpi');
+                if (!k || k === 'all') {
+                    statusFilter.value = '';
+                    render();
+                    return;
+                }
+
+                const st = btn.getAttribute('data-st') || '';
+                statusFilter.value = st;
+                render();
+            });
+        }
+
+        render();
+    })();
+</script>

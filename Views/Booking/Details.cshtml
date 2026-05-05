@@ -1,0 +1,209 @@
+﻿@model QLKS.Models.DatPhong
+@using QLKS.Models
+@using System.Globalization
+@using System.Reflection
+@using System.ComponentModel.DataAnnotations
+@using System.Linq
+
+@{
+    ViewData["Title"] = $"Chi tiết booking #{Model.Id}";
+
+    var vi = CultureInfo.GetCultureInfo("vi-VN");
+    string DateFmt(DateTime d) => d.ToString("dd/MM/yyyy", vi);
+    string DateTimeFmt(DateTime d) => d.ToString("dd/MM/yyyy HH:mm", vi);
+    string Money(decimal x) => string.Format(vi, "{0:N0}", x);
+
+    string DisplayEnum(Enum e)
+    {
+        var mem = e.GetType().GetMember(e.ToString()).FirstOrDefault();
+        var name = mem?.GetCustomAttribute<DisplayAttribute>()?.Name;
+        return string.IsNullOrWhiteSpace(name) ? e.ToString() : name!;
+    }
+
+    string BookingClass(TrangThaiDatPhong st) => st switch
+    {
+        TrangThaiDatPhong.DaDat => "st-blue",
+        TrangThaiDatPhong.DaNhanPhong => "st-green",
+        TrangThaiDatPhong.DaTraPhong => "st-slate",
+        TrangThaiDatPhong.DaHuy => "st-red",
+        _ => "st-slate"
+    };
+
+    string InvoiceClass(TrangThaiHoaDon st) => st switch
+    {
+        TrangThaiHoaDon.ChuaThanhToan => "st-amber",
+        TrangThaiHoaDon.DaThanhToan => "st-green",
+        TrangThaiHoaDon.DaHuy => "st-red",
+        _ => "st-slate"
+    };
+
+    var phong = Model.Phong;
+    var loai = phong?.LoaiPhong;
+    var imgRaw = loai?.HinhAnh;
+
+    var img = string.IsNullOrWhiteSpace(imgRaw)
+        ? Url.Content("~/redplanet/images/img_1.jpg")
+        : (imgRaw!.StartsWith("http", StringComparison.OrdinalIgnoreCase) ? imgRaw : Url.Content(imgRaw));
+
+    var canCancel = (ViewBag.CanCancel as bool?) ?? false;
+    var hd = Model.HoaDon;
+}
+
+@section Styles {
+    <link rel="stylesheet" href="~/redplanet/css/qlks-bookings.css" asp-append-version="true" />
+}
+
+<section class="qlks-bookings">
+    <div class="container">
+
+        <div class="qlks-bookings-head" data-aos="fade-up">
+            <div>
+                <div class="qlks-kicker">BOOKING DETAIL</div>
+                <h1 class="qlks-title">Chi tiết booking #@Model.Id</h1>
+                <div class="qlks-sub">Xem thông tin đặt phòng và hoá đơn.</div>
+            </div>
+
+            <div class="qlks-head-actions">
+                <a class="btn btn-outline-secondary qlks-btn-pill" asp-controller="Booking" asp-action="MyBookings">
+                    <span class="fa fa-arrow-left mr-2"></span>Quay lại
+                </a>
+            </div>
+        </div>
+
+        <div class="bk-detail-wrap" data-aos="fade-up" data-aos-delay="80">
+            <article class="bk-card bk-card--detail">
+                <div class="bk-thumb">
+                    <img src="@img" alt="Room" />
+                </div>
+
+                <div class="bk-body">
+                    <div class="bk-top">
+                        <div class="bk-id">
+                            <span class="bk-label">Booking</span>
+                            <span class="bk-num">#@Model.Id</span>
+                        </div>
+
+                        <span class="bk-status @BookingClass(Model.TrangThai)">
+                            @DisplayEnum(Model.TrangThai)
+                        </span>
+                    </div>
+
+                    <div class="bk-room">
+                        <div class="bk-room-main">
+                            Phòng <b>@(phong?.SoPhong ?? "—")</b> ·
+                            <span>@(loai?.TenLoai ?? "Phòng")</span>
+                            <span style="margin-left:8px; color:#94a3b8; font-weight:800;">
+                                (Tầng @(phong?.Tang ?? 0))
+                            </span>
+                        </div>
+
+                        <div class="bk-dates">
+                            <span class="fa fa-calendar mr-1"></span>
+                            @DateFmt(Model.NgayNhanPhong)
+                            <span class="mx-1">→</span>
+                            @DateFmt(Model.NgayTraPhong)
+                            <span class="bk-dot">•</span>
+                            <b>@Model.SoDem</b> đêm
+                            @if (loai != null)
+                            {
+                                <span class="bk-dot">•</span>
+                                <b>@loai.SoNguoi</b>
+
+                                <text> người</text>
+                            }
+                        </div>
+                    </div>
+
+                    <div class="bk-meta bk-meta--detail">
+                        <div class="bk-meta-item">
+                            <div class="bk-meta-k">Ngày đặt</div>
+                            <div class="bk-meta-v">@DateTimeFmt(Model.NgayDat)</div>
+                        </div>
+
+                        <div class="bk-meta-item">
+                            <div class="bk-meta-k">Giá / đêm</div>
+                            <div class="bk-meta-v">@Money(loai?.GiaMoiDem ?? 0) VND</div>
+                        </div>
+
+                        <div class="bk-meta-item">
+                            <div class="bk-meta-k">Số đêm</div>
+                            <div class="bk-meta-v">@Model.SoDem</div>
+                        </div>
+
+                        <div class="bk-meta-item">
+                            <div class="bk-meta-k">Tổng tiền</div>
+                            <div class="bk-meta-v bk-money">@Money(Model.TongTien) VND</div>
+                        </div>
+                    </div>
+
+                    <div class="bk-sep"></div>
+
+                    <div class="bk-hd">
+                        <div class="bk-hd-title">Hoá đơn</div>
+
+                        @if (hd == null)
+                        {
+                            <div class="bk-note" style="margin-left:0;">
+                                <span class="fa fa-info-circle mr-1"></span>
+                                Chưa có hoá đơn cho booking này.
+                            </div>
+                        }
+                        else
+                        {
+                            <div class="bk-hd-grid">
+                                <div class="bk-meta-item">
+                                    <div class="bk-meta-k">Trạng thái</div>
+                                    <div class="bk-meta-v">
+                                        <span class="bk-status @InvoiceClass(hd.TrangThai)">
+                                            @DisplayEnum(hd.TrangThai)
+                                        </span>
+                                    </div>
+                                </div>
+
+                                <div class="bk-meta-item">
+                                    <div class="bk-meta-k">Phương thức</div>
+                                    <div class="bk-meta-v">@DisplayEnum(hd.PhuongThuc)</div>
+                                </div>
+
+                                <div class="bk-meta-item">
+                                    <div class="bk-meta-k">Số tiền</div>
+                                    <div class="bk-meta-v bk-money">@Money(hd.SoTien) VND</div>
+                                </div>
+
+                                <div class="bk-meta-item">
+                                    <div class="bk-meta-k">Ngày thanh toán</div>
+                                    <div class="bk-meta-v">
+                                        @(hd.NgayThanhToan.HasValue? DateTimeFmt(hd.NgayThanhToan.Value) : "—")
+                                    </div>
+                                </div>
+                            </div>
+                        }
+                    </div>
+
+                    <div class="bk-actions">
+                        @if (canCancel)
+                        {
+                            <form asp-controller="Booking" asp-action="Cancel" asp-route-id="@Model.Id"
+                                  method="post" class="bk-cancel-form">
+                                @Html.AntiForgeryToken()
+                                <button type="submit" class="btn btn-sm btn-outline-danger bk-btn"
+                                        onclick="return confirm('Bạn chắc chắn muốn huỷ booking #@Model.Id ?');">
+                                    <span class="fa fa-times mr-1"></span>Huỷ booking
+                                </button>
+                            </form>
+                        }
+                        else
+                        {
+                            <div class="bk-note" style="margin-left:auto;">
+                                <span class="fa fa-info-circle mr-1"></span>
+                                Không thể huỷ (sát ngày / sai trạng thái)
+                            </div>
+                        }
+                    </div>
+
+                </div>
+            </article>
+        </div>
+
+    </div>
+</section>

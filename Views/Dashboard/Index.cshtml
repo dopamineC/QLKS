@@ -1,0 +1,698 @@
+﻿@using System.Text.Json
+@using QLKS.Models
+@using QLKS.Helpers
+@using System.Globalization
+
+@{
+    ViewData["Title"] = "Dashboard";
+
+    var doanhThu = ViewBag.DoanhThu as IEnumerable<dynamic> ?? new List<dynamic>();
+    var topPhong = ViewBag.TopPhong as IEnumerable<dynamic> ?? new List<dynamic>();
+    var soDemTheoLoai = ViewBag.SoDemTheoLoai as IEnumerable<dynamic> ?? new List<dynamic>();
+    var recent = ViewBag.Recent as IEnumerable<dynamic> ?? new List<dynamic>();
+
+    // ✅ TODO LIST
+    var todos = ViewBag.Todos as List<TodoItem> ?? new List<TodoItem>();
+
+    decimal doanhThuThang = (decimal)(ViewBag.KPI_DoanhThuThang ?? 0m);
+    decimal doanhThuThangTruoc = (decimal)(ViewBag.KPI_DoanhThuThangTruoc ?? 0m);
+
+    int soDatPhongThang = (int)(ViewBag.KPI_SoDatPhongThang ?? 0);
+    int soDatPhongHomNay = (int)(ViewBag.KPI_SoDatPhongHomNay ?? 0);
+
+    int soPhong = (int)(ViewBag.KPI_SoPhong ?? 0);
+    int soLoai = (int)(ViewBag.KPI_SoLoai ?? 0);
+
+    int phongTrong = (int)(ViewBag.KPI_PhongTrong ?? 0);
+    int phongDangSuDung = (int)(ViewBag.KPI_PhongDangSuDung ?? 0);
+    int phongBaoTri = (int)(ViewBag.KPI_PhongBaoTri ?? 0);
+
+    // % thay đổi doanh thu
+    decimal pct = 0;
+    if (doanhThuThangTruoc > 0) pct = (doanhThuThang - doanhThuThangTruoc) / doanhThuThangTruoc * 100;
+
+    // Build 12 tháng liên tục (đủ tháng kể cả tháng doanh thu = 0)
+    DateTime from = (DateTime)(ViewBag.From ?? DateTime.Today.AddMonths(-11));
+    var thangList = Enumerable.Range(0, 12).Select(i => from.AddMonths(i)).ToList();
+
+    var map = new Dictionary<string, decimal>();
+    foreach (var x in doanhThu)
+    {
+        int y = (int)x.Year;
+        int m = (int)x.Month;
+        decimal tongDoanhThu = (decimal)x.Tong;
+        map[$"{y}-{m}"] = tongDoanhThu;
+    }
+
+    var labels12 = thangList.Select(d => d.ToString("MM/yyyy")).ToList();
+    var values12 = thangList.Select(d => map.TryGetValue($"{d.Year}-{d.Month}", out var v) ? v : 0m).ToList();
+
+    // Top phòng chart
+    var topLabels = topPhong.Select(x => (string)x.SoPhong).ToList();
+    var topValues = topPhong.Select(x => (int)x.SoLan).ToList();
+    int maxTop = topValues.Any() ? topValues.Max() : 0;
+
+    // Số đêm theo loại phòng chart
+    var nightsLabels = soDemTheoLoai.Select(x => (string)x.Loai).ToList();
+    var nightsValues = soDemTheoLoai.Select(x => (int)x.SoDem).ToList();
+    int maxNights = nightsValues.Any() ? nightsValues.Max() : 0;
+
+    var vi = CultureInfo.GetCultureInfo("vi-VN");
+    string Money(decimal v) => v.ToString("#,0", vi); // vi-VN -> dấu .
+}
+
+@section Styles {
+    <style>
+        .dash-card {
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+        }
+
+            .dash-card .card-body {
+                flex: 1 1 auto;
+            }
+
+        .dash-chart {
+            position: relative;
+            width: 100%;
+            height: 260px;
+        }
+
+        .dash-chart-sm {
+            height: 220px;
+        }
+
+        .dash-chart-lg {
+            height: 360px;
+        }
+
+        .dash-table-wrap {
+            max-height: 420px;
+            overflow: auto;
+        }
+        @@media (max-width:1199.98px) {
+            .dash-chart-lg
+
+        {
+            height: 320px;
+        }
+
+        .dash-table-wrap {
+            max-height: none;
+        }
+
+        }</style>
+}
+
+@if (TempData["todo_msg"] != null)
+{
+    <div class="alert alert-warning alert-dismissible fade show" role="alert">
+        @TempData["todo_msg"]
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+}
+
+<div class="mb-3">
+    <div class="d-flex align-items-center justify-content-between flex-wrap gap-2">
+        <div>
+            <div class="text-muted">Tổng quan hệ thống</div>
+            <div class="fs-5 fw-semibold">Dashboard quản trị khách sạn</div>
+        </div>
+        <div class="d-flex gap-2">
+            <a class="btn btn-outline-secondary btn-sm" asp-controller="Phong" asp-action="Index">
+                <i class="fas fa-door-open me-1"></i> Quản lý phòng
+            </a>
+            <a class="btn btn-outline-secondary btn-sm" asp-controller="LoaiPhong" asp-action="Index">
+                <i class="fas fa-layer-group me-1"></i> Loại phòng
+            </a>
+            <a class="btn btn-primary btn-sm" asp-controller="AdminBooking" asp-action="Index">
+                <i class="fas fa-calendar-check me-1"></i> Đặt phòng
+            </a>
+        </div>
+    </div>
+</div>
+
+<!-- KPI -->
+<div class="row g-3">
+    <div class="col-12 col-md-6 col-xl-3">
+        <div class="small-box text-bg-primary">
+            <div class="inner">
+                <h3>@Money(doanhThuThang)<sup style="font-size: 18px"> ₫</sup></h3>
+                <p class="mb-0">Doanh thu tháng</p>
+                <small class="opacity-75">
+                    @if (doanhThuThangTruoc > 0)
+                    {
+                        <span>@(pct >= 0 ? "Tăng" : "Giảm") @Math.Abs(pct).ToString("0.0")% so với tháng trước</span>
+                    }
+                    else
+                    {
+                        <span>Cập nhật theo hóa đơn đã thanh toán</span>
+                    }
+                </small>
+            </div>
+            <div class="small-box-icon">
+                <i class="fas fa-coins"></i>
+            </div>
+            <a asp-controller="AdminBooking" asp-action="Index" class="small-box-footer">
+                Xem đặt phòng <i class="fas fa-arrow-circle-right"></i>
+            </a>
+        </div>
+    </div>
+
+    <div class="col-12 col-md-6 col-xl-3">
+        <div class="small-box text-bg-success">
+            <div class="inner">
+                <h3>@soDatPhongThang</h3>
+                <p class="mb-0">Đặt phòng tháng</p>
+                <small class="opacity-75">Hôm nay: <b>@soDatPhongHomNay</b></small>
+            </div>
+            <div class="small-box-icon">
+                <i class="fas fa-calendar-plus"></i>
+            </div>
+            <a asp-controller="AdminBooking" asp-action="Create" class="small-box-footer">
+                Tạo đặt phòng <i class="fas fa-arrow-circle-right"></i>
+            </a>
+        </div>
+    </div>
+
+    <div class="col-12 col-md-6 col-xl-3">
+        <div class="small-box text-bg-warning">
+            <div class="inner">
+                <h3>@soPhong</h3>
+                <p class="mb-0">Tổng phòng</p>
+                <small class="opacity-75">
+                    Trống: <b>@phongTrong</b> · Đang dùng: <b>@phongDangSuDung</b> · Bảo trì: <b>@phongBaoTri</b>
+                </small>
+            </div>
+            <div class="small-box-icon">
+                <i class="fas fa-bed"></i>
+            </div>
+            <a asp-controller="Phong" asp-action="Index" class="small-box-footer">
+                Xem danh sách <i class="fas fa-arrow-circle-right"></i>
+            </a>
+        </div>
+    </div>
+
+    <div class="col-12 col-md-6 col-xl-3">
+        <div class="small-box text-bg-info">
+            <div class="inner">
+                <h3>@soLoai</h3>
+                <p class="mb-0">Loại phòng</p>
+                <small class="opacity-75">Quản lý giá & sức chứa</small>
+            </div>
+            <div class="small-box-icon">
+                <i class="fas fa-layer-group"></i>
+            </div>
+            <a asp-controller="LoaiPhong" asp-action="Index" class="small-box-footer">
+                Xem loại phòng <i class="fas fa-arrow-circle-right"></i>
+            </a>
+        </div>
+    </div>
+</div>
+
+<!-- Row 1: Revenue (8) + Top (4) -->
+<div class="row g-3 mt-1">
+    <div class="col-12 col-xl-8">
+        <div class="card card-outline card-primary dash-card">
+            <div class="card-header">
+                <h3 class="card-title mb-0">
+                    <i class="fas fa-chart-line me-2"></i> Doanh thu 12 tháng gần nhất
+                </h3>
+                <div class="card-tools">
+                    <button class="btn btn-tool" data-lte-toggle="card-collapse" title="Thu gọn">
+                        <i class="fas fa-minus"></i>
+                    </button>
+                </div>
+            </div>
+            <div class="card-body">
+                <div class="dash-chart dash-chart-lg">
+                    <canvas id="chartRevenue"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-12 col-xl-4">
+        <div class="card card-outline card-secondary dash-card">
+            <div class="card-header">
+                <h3 class="card-title mb-0">
+                    <i class="fas fa-crown me-2"></i> Top phòng được đặt
+                </h3>
+            </div>
+            <div class="card-body">
+                @if (!topPhong.Any())
+                {
+                    <div class="text-muted">Chưa có dữ liệu</div>
+                }
+                else
+                {
+                    <div class="dash-chart dash-chart-sm">
+                        <canvas id="chartTopPhong"></canvas>
+                    </div>
+
+                    <div class="d-flex flex-column gap-2 mt-3">
+                        @foreach (var x in topPhong)
+                        {
+                            int soLan = (int)x.SoLan;
+                            int percent = maxTop == 0 ? 0 : (int)Math.Round(soLan * 100.0 / maxTop);
+
+                            <div>
+                                <div class="d-flex justify-content-between">
+                                    <div class="fw-semibold">Phòng @x.SoPhong</div>
+                                    <div class="text-muted">@soLan lần</div>
+                                </div>
+                                <div class="progress" style="height: 8px;">
+                                    <div class="progress-bar" role="progressbar" style="width:@(percent)%"></div>
+                                </div>
+                            </div>
+                        }
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Row 2: Nights (8) + Room status (4) -->
+<div class="row g-3 mt-1">
+    <div class="col-12 col-xl-8">
+        <div class="card card-outline card-success dash-card">
+            <div class="card-header">
+                <h3 class="card-title mb-0">
+                    <i class="fas fa-moon me-2"></i> Số đêm đã bán theo loại phòng (12 tháng)
+                </h3>
+            </div>
+            <div class="card-body">
+                @if (!soDemTheoLoai.Any())
+                {
+                    <div class="text-muted">Chưa có dữ liệu</div>
+                }
+                else
+                {
+                    <div class="dash-chart">
+                        <canvas id="chartNightsLoai"></canvas>
+                    </div>
+
+                    <div class="d-flex flex-column gap-2 mt-3">
+                        @foreach (var x in soDemTheoLoai)
+                        {
+                            int soDem = (int)x.SoDem;
+                            int percent = maxNights == 0 ? 0 : (int)Math.Round(soDem * 100.0 / maxNights);
+
+                            <div>
+                                <div class="d-flex justify-content-between">
+                                    <div class="fw-semibold">@x.Loai</div>
+                                    <div class="text-muted">@soDem đêm</div>
+                                </div>
+                                <div class="progress" style="height: 8px;">
+                                    <div class="progress-bar bg-success" role="progressbar" style="width:@(percent)%"></div>
+                                </div>
+                            </div>
+                        }
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+
+    <div class="col-12 col-xl-4">
+        <div class="card card-outline card-light dash-card">
+            <div class="card-header">
+                <h3 class="card-title mb-0">
+                    <i class="fas fa-chart-pie me-2"></i> Trạng thái phòng
+                </h3>
+            </div>
+
+            <div class="card-body">
+                @{
+                    int tongPhong = soPhong <= 0 ? 1 : soPhong;
+
+                    int pTrong = (int)Math.Round(phongTrong * 100.0 / tongPhong);
+                    int pDung = (int)Math.Round(phongDangSuDung * 100.0 / tongPhong);
+                    int pBaoTri = 100 - pTrong - pDung;
+
+                    pTrong = Math.Clamp(pTrong, 0, 100);
+                    pDung = Math.Clamp(pDung, 0, 100);
+                    pBaoTri = Math.Clamp(pBaoTri, 0, 100);
+                }
+
+                <div class="mb-3">
+                    <div class="d-flex justify-content-between">
+                        <div><span class="badge bg-success">Trống</span></div>
+                        <div class="text-muted">@phongTrong phòng</div>
+                    </div>
+                    <div class="progress" style="height: 10px;">
+                        <div class="progress-bar bg-success" style="width:@(pTrong)%"></div>
+                    </div>
+                </div>
+
+                <div class="mb-3">
+                    <div class="d-flex justify-content-between">
+                        <div><span class="badge bg-primary">Đang sử dụng</span></div>
+                        <div class="text-muted">@phongDangSuDung phòng</div>
+                    </div>
+                    <div class="progress" style="height: 10px;">
+                        <div class="progress-bar bg-primary" style="width:@(pDung)%"></div>
+                    </div>
+                </div>
+
+                <div class="mb-0">
+                    <div class="d-flex justify-content-between">
+                        <div><span class="badge bg-warning text-dark">Bảo trì</span></div>
+                        <div class="text-muted">@phongBaoTri phòng</div>
+                    </div>
+                    <div class="progress" style="height: 10px;">
+                        <div class="progress-bar bg-warning" style="width:@(pBaoTri)%"></div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card-footer">
+                <div class="d-grid gap-2">
+                    <a class="btn btn-outline-primary" asp-controller="Phong" asp-action="Create">
+                        <i class="fas fa-plus me-1"></i> Thêm phòng
+                    </a>
+                    <a class="btn btn-outline-secondary" asp-controller="LoaiPhong" asp-action="Create">
+                        <i class="fas fa-layer-group me-1"></i> Thêm loại phòng
+                    </a>
+                    <a class="btn btn-primary" asp-controller="AdminBooking" asp-action="Create">
+                        <i class="fas fa-calendar-plus me-1"></i> Tạo đặt phòng
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Row 3: Recent (8) + Todo (4) -->
+<div class="row g-3 mt-1">
+    <div class="col-12 col-xl-8">
+        <div class="card card-outline card-info dash-card">
+            <div class="card-header">
+                <h3 class="card-title mb-0">
+                    <i class="fas fa-clock me-2"></i> Đặt phòng gần đây
+                </h3>
+                <div class="card-tools">
+                    <a class="btn btn-outline-secondary btn-sm" asp-controller="AdminBooking" asp-action="Index">
+                        Xem tất cả
+                    </a>
+                </div>
+            </div>
+
+            <div class="card-body p-0 dash-table-wrap">
+                <div class="table-responsive">
+                    <table class="table table-hover table-striped align-middle mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th style="width:90px;">Mã</th>
+                                <th style="width:120px;">Phòng</th>
+                                <th>Loại</th>
+                                <th style="width:120px;">Nhận</th>
+                                <th style="width:120px;">Trả</th>
+                                <th style="width:160px;">Trạng thái</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @if (!recent.Any())
+                            {
+                                <tr>
+                                    <td colspan="6" class="text-center text-muted py-4">Chưa có dữ liệu</td>
+                                </tr>
+                            }
+                            else
+                            {
+                                foreach (var x in recent)
+                                {
+                                    var st = (TrangThaiDatPhong)x.TrangThai;
+                                    <tr>
+                                        <td class="fw-semibold">#@x.Id</td>
+                                        <td class="fw-semibold">@x.SoPhong</td>
+                                        <td>@x.Loai</td>
+                                        <td>@(((DateTime)x.NgayNhan).ToString("dd/MM/yyyy"))</td>
+                                        <td>@(((DateTime)x.NgayTra).ToString("dd/MM/yyyy"))</td>
+                                        <td>
+                                            <span class="@st.BadgeClass()">@st.GetDisplayName()</span>
+                                        </td>
+                                    </tr>
+                                }
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div class="card-footer text-muted">
+                Gợi ý: vào <b>Đặt phòng</b> để thao tác nhận/trả phòng & thanh toán.
+            </div>
+        </div>
+    </div>
+
+    <div class="col-12 col-xl-4">
+        <div class="card card-outline card-primary dash-card">
+            <div class="card-header">
+                <h3 class="card-title mb-0">
+                    <i class="fas fa-list-check me-2"></i> Todo list
+                </h3>
+            </div>
+
+            <div class="card-body">
+                <form asp-controller="Dashboard" asp-action="AddTodo" method="post" class="row g-2 align-items-end">
+                    @Html.AntiForgeryToken()
+
+                    <div class="col-12">
+                        <label class="form-label mb-1">Nội dung</label>
+                        <input class="form-control" name="tieuDe" placeholder="VD: Gọi khách xác nhận..." />
+                    </div>
+
+                    <div class="col-7">
+                        <label class="form-label mb-1">Hạn (tuỳ chọn)</label>
+                        <input type="date" class="form-control" name="han" />
+                    </div>
+
+                    <div class="col-5 d-grid">
+                        <button class="btn btn-primary" type="submit">
+                            <i class="fas fa-plus me-1"></i> Thêm
+                        </button>
+                    </div>
+                </form>
+
+                <hr />
+
+                @if (todos.Count == 0)
+                {
+                    <div class="text-muted">Chưa có todo nào.</div>
+                }
+                else
+                {
+                    <div class="list-group" style="max-height: 380px; overflow:auto;">
+                        @foreach (var t in todos)
+                        {
+                            <div class="list-group-item d-flex justify-content-between align-items-center">
+                                <div class="me-2">
+                                    <div class="fw-semibold" style="@(t.DaXong ? "text-decoration:line-through; opacity:.6" : "")">
+                                        @t.TieuDe
+                                    </div>
+                                    <div class="small text-muted">
+                                        @if (t.Han.HasValue)
+                                        {
+                                            <span class="badge bg-secondary me-2">Hạn: @t.Han.Value.ToString("dd/MM/yyyy")</span>
+                                        }
+                                        <span>@t.NgayTao.ToLocalTime().ToString("dd/MM/yyyy HH:mm")</span>
+                                    </div>
+                                </div>
+
+                                <div class="d-flex gap-2">
+                                    <form asp-controller="Dashboard" asp-action="ToggleTodo" method="post" class="d-inline">
+                                        @Html.AntiForgeryToken()
+                                        <input type="hidden" name="id" value="@t.Id" />
+                                        <button type="submit" class="btn btn-sm @(t.DaXong ? "btn-outline-secondary" : "btn-success")"
+                                                title="@(t.DaXong ? "Bỏ hoàn thành" : "Hoàn thành")">
+                                            <i class="fas @(t.DaXong ? "fa-rotate-left" : "fa-check")"></i>
+                                        </button>
+                                    </form>
+
+                                    <form asp-controller="Dashboard" asp-action="DeleteTodo" method="post" class="d-inline">
+                                        @Html.AntiForgeryToken()
+                                        <input type="hidden" name="id" value="@t.Id" />
+                                        <button type="submit" class="btn btn-sm btn-danger"
+                                                onclick="return confirm('Xoá todo này?');" title="Xoá">
+                                            <i class="fas fa-trash"></i>
+                                        </button>
+                                    </form>
+                                </div>
+                            </div>
+                        }
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        (function () {
+            const fmtNumber = (n) => new Intl.NumberFormat('vi-VN').format(n ?? 0);
+            const fmtMoney  = (n) => `${fmtNumber(n)} ₫`;
+
+            const labels12 = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(labels12));
+            const values12 = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(values12));
+
+            const topLabels = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(topLabels));
+            const topValues = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(topValues));
+
+            const nightsLabels = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(nightsLabels));
+            const nightsValues = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(nightsValues));
+
+            let chartRevenue = null;
+            let chartTop = null;
+            let chartNights = null;
+
+            function debounce(fn, wait = 200) {
+                let t;
+                return (...args) => {
+                    clearTimeout(t);
+                    t = setTimeout(() => fn(...args), wait);
+                };
+            }
+
+            function buildCharts() {
+                if (!window.Chart) {
+                    console.error("Chart.js chưa được load. Kiểm tra _AdminLayout.cshtml (CDN chart.js phải nằm trước RenderSection Scripts).");
+                    return;
+                }
+
+                if (chartRevenue) { chartRevenue.destroy(); chartRevenue = null; }
+                if (chartTop) { chartTop.destroy(); chartTop = null; }
+                if (chartNights) { chartNights.destroy(); chartNights = null; }
+
+                const revCanvas = document.getElementById('chartRevenue');
+                if (revCanvas) {
+                    chartRevenue = new Chart(revCanvas, {
+                        type: 'line',
+                        data: {
+                            labels: labels12,
+                            datasets: [{
+                                label: 'Doanh thu',
+                                data: values12,
+                                tension: 0.35,
+                                fill: true,
+                                pointRadius: 3,
+                                borderColor: 'rgba(13,110,253,1)',
+                                backgroundColor: 'rgba(13,110,253,0.12)',
+                                pointBackgroundColor: 'rgba(13,110,253,1)'
+                            }]
+                        },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            interaction: { mode: 'index', intersect: false },
+                            plugins: {
+                                legend: { display: true },
+                                tooltip: {
+                                    callbacks: {
+                                        title: (items) => `Tháng: ${items[0].label}`,
+                                        label: (ctx) => ` Doanh thu: ${fmtMoney(ctx.parsed.y)}`
+                                    }
+                                }
+                            },
+                            scales: {
+                                y: {
+                                    beginAtZero: true,
+                                    ticks: { callback: (v) => fmtNumber(v) }
+                                }
+                            }
+                        }
+                    });
+                }
+
+                const topCanvas = document.getElementById('chartTopPhong');
+                if (topCanvas && topLabels.length) {
+                    chartTop = new Chart(topCanvas, {
+                        type: 'bar',
+                        data: {
+                            labels: topLabels,
+                            datasets: [{
+                                label: 'Số lần đặt',
+                                data: topValues,
+                                borderWidth: 1,
+                                borderColor: 'rgba(25,135,84,1)',
+                                backgroundColor: 'rgba(25,135,84,0.25)'
+                            }]
+                        },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            interaction: { mode: 'index', intersect: false },
+                            plugins: {
+                                legend: { display: false },
+                                tooltip: {
+                                    callbacks: {
+                                        title: (items) => `Phòng: ${items[0].label}`,
+                                        label: (ctx) => ` Số lần đặt: ${fmtNumber(ctx.parsed.y)} lần`
+                                    }
+                                }
+                            },
+                            scales: {
+                                y: { beginAtZero: true, ticks: { stepSize: 1 } }
+                            }
+                        }
+                    });
+                }
+
+                const nightsCanvas = document.getElementById('chartNightsLoai');
+                if (nightsCanvas && nightsLabels.length) {
+                    chartNights = new Chart(nightsCanvas, {
+                        type: 'bar',
+                        data: {
+                            labels: nightsLabels,
+                            datasets: [{
+                                label: 'Số đêm',
+                                data: nightsValues,
+                                borderWidth: 1,
+                                borderColor: 'rgba(32,201,151,1)',
+                                backgroundColor: 'rgba(32,201,151,0.25)'
+                            }]
+                        },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            interaction: { mode: 'index', intersect: false },
+                            plugins: {
+                                legend: { display: false },
+                                tooltip: {
+                                    callbacks: {
+                                        title: (items) => `Loại: ${items[0].label}`,
+                                        label: (ctx) => ` Số đêm: ${fmtNumber(ctx.parsed.y)} đêm`
+                                    }
+                                }
+                            },
+                            scales: {
+                                y: { beginAtZero: true }
+                            }
+                        }
+                    });
+                }
+            }
+
+            function forceResize() {
+                if (chartRevenue) chartRevenue.resize();
+                if (chartTop) chartTop.resize();
+                if (chartNights) chartNights.resize();
+            }
+
+            window.addEventListener('load', () => {
+                buildCharts();
+                setTimeout(forceResize, 50);
+            });
+
+            window.addEventListener('resize', debounce(forceResize, 200));
+
+            document.addEventListener('click', (e) => {
+                const t = e.target.closest('[data-lte-toggle="pushmenu"], [data-widget="pushmenu"], [data-lte-toggle="card-collapse"], [data-widget="collapse"]');
+                if (t) setTimeout(forceResize, 350);
+            });
+        })();
+    </script>
+}

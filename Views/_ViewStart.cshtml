@@ -1,0 +1,15 @@
+﻿@{
+    var ctrl = (ViewContext.RouteData.Values["controller"] ?? "").ToString();
+
+    bool isAdminPage =
+        string.Equals(ctrl, "Dashboard", StringComparison.OrdinalIgnoreCase) ||
+        string.Equals(ctrl, "LoaiPhong", StringComparison.OrdinalIgnoreCase) ||
+        string.Equals(ctrl, "Phong", StringComparison.OrdinalIgnoreCase) ||
+        string.Equals(ctrl, "NguoiDung", StringComparison.OrdinalIgnoreCase) ||
+        string.Equals(ctrl, "AdminBooking", StringComparison.OrdinalIgnoreCase) ||
+        string.Equals(ctrl, "AdminHoaDon", StringComparison.OrdinalIgnoreCase) ||
+        string.Equals(ctrl, "AdminLichDatPhong", StringComparison.OrdinalIgnoreCase);
+
+
+    Layout = (isAdminPage && User.IsInRole("Admin")) ? "_AdminLayout" : "_UserLayout";
+}

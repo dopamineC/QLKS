@@ -1,0 +1,102 @@
+﻿@model QLKS.ViewModels.LoginVM
+@{
+    ViewData["Title"] = "Đăng nhập";
+    var bg = Url.Content("~/redplanet/images/hero_3.jpg");
+}
+
+@section Styles {
+    <link rel="stylesheet" href="~/redplanet/css/qlks-auth.css" asp-append-version="true" />
+}
+
+<section class="site-hero overlay qlks-auth-hero" style="background-image: url('@bg')">
+    <div class="container">
+        <div class="row align-items-center justify-content-center qlks-auth-row">
+            <div class="col-12 col-md-10 col-lg-6">
+                <div class="block-32 qlks-auth-card" data-aos="fade-up">
+
+                    <div class="qlks-auth-head text-center mb-4">
+                        <div class="qlks-auth-brand">QLKS HOTEL</div>
+                        <h2 class="qlks-auth-title mb-1">Đăng nhập</h2>
+                        <p class="qlks-auth-sub mb-0">Đăng nhập để tiếp tục đặt phòng và quản lý lịch đặt.</p>
+                    </div>
+
+                    <form asp-action="Login" method="post" novalidate>
+                        @Html.AntiForgeryToken()
+                        <input type="hidden" asp-for="ReturnUrl" />
+
+                        <div asp-validation-summary="ModelOnly" class="qlks-auth-vsum"></div>
+
+                        <div class="form-group qlks-auth-field">
+                            <label class="font-weight-bold text-black">Tên đăng nhập</label>
+                            <input class="form-control qlks-auth-control"
+                                   asp-for="TenDangNhap"
+                                   autocomplete="username"
+                                   placeholder="Nhập username" />
+                            <span class="text-danger small" asp-validation-for="TenDangNhap"></span>
+                        </div>
+
+                        <div class="form-group qlks-auth-field">
+                            <label class="font-weight-bold text-black">Mật khẩu</label>
+
+                            <div class="qlks-auth-pass">
+                                <input id="loginPass"
+                                       class="form-control qlks-auth-control"
+                                       asp-for="MatKhau"
+                                       type="password"
+                                       autocomplete="current-password"
+                                       placeholder="Nhập mật khẩu" />
+
+                                <button type="button"
+                                        class="qlks-auth-toggle"
+                                        data-toggle-pass="#loginPass"
+                                        aria-label="Hiện/ẩn mật khẩu">
+                                    <svg class="qlks-auth-eye" viewBox="0 0 24 24" aria-hidden="true">
+                                        <path d="M12 5c5.5 0 9.8 4.2 11 7-1.2 2.8-5.5 7-11 7S2.2 14.8 1 12c1.2-2.8 5.5-7 11-7zm0 2C7.5 7 4 10.4 3.1 12 4 13.6 7.5 17 12 17s8-3.4 8.9-5C20 10.4 16.5 7 12 7zm0 2.2A2.8 2.8 0 1 1 9.2 12 2.8 2.8 0 0 1 12 9.2z" />
+                                    </svg>
+                                </button>
+                            </div>
+
+                            <span class="text-danger small" asp-validation-for="MatKhau"></span>
+                        </div>
+
+                        <div class="d-flex align-items-center justify-content-between mb-3 qlks-auth-meta">
+                            <label class="mb-0 qlks-auth-check">
+                                <input asp-for="GhiNho" />
+                                <span>Ghi nhớ đăng nhập</span>
+                            </label>
+
+                            <a class="qlks-auth-link" asp-action="Register">Tạo tài khoản</a>
+                        </div>
+
+                        <button class="btn btn-primary btn-block qlks-auth-btn" type="submit">
+                            Đăng nhập
+                        </button>
+                    </form>
+
+                    <div class="text-center mt-3 qlks-auth-foot">
+                        <a class="qlks-auth-link2" asp-controller="Home" asp-action="Index">← Quay về trang chủ</a>
+                    </div>
+
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+    <script>
+        (function () {
+            const btns = document.querySelectorAll('[data-toggle-pass]');
+            btns.forEach(btn => {
+                btn.addEventListener('click', function () {
+                    const sel = btn.getAttribute('data-toggle-pass');
+                    const input = document.querySelector(sel);
+                    if (!input) return;
+                    input.type = (input.type === 'password') ? 'text' : 'password';
+                    btn.classList.toggle('is-on', input.type === 'text');
+                });
+            });
+        })();
+    </script>
+}

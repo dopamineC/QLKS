@@ -1,0 +1,429 @@
+﻿@model List<QLKS.Models.DatPhong>
+@using QLKS.Models
+@using QLKS.Helpers
+@using System.Globalization
+@using System.Linq
+
+@{
+    ViewData["Title"] = "";
+
+    string? q0 = ViewBag.Q as string;
+    string? tuNgay0 = ViewBag.TuNgay as string;
+    string? denNgay0 = ViewBag.DenNgay as string;
+
+    TrangThaiDatPhong? st0 = null;
+    try { st0 = (TrangThaiDatPhong?)ViewBag.TrangThai; } catch { st0 = null; }
+
+    // KPI
+    var total = Model?.Count ?? 0;
+    var cDat = Model.Count(x => x.TrangThai == TrangThaiDatPhong.DaDat);
+    var cNhan = Model.Count(x => x.TrangThai == TrangThaiDatPhong.DaNhanPhong);
+    var cTra = Model.Count(x => x.TrangThai == TrangThaiDatPhong.DaTraPhong);
+    var cHuy = Model.Count(x => x.TrangThai == TrangThaiDatPhong.DaHuy);
+
+    // Doanh thu: tính hóa đơn đã thanh toán
+    var revenue = Model
+        .Where(x => x.HoaDon != null && x.HoaDon.TrangThai == TrangThaiHoaDon.DaThanhToan)
+        .Sum(x => x.HoaDon!.SoTien);
+
+    var vi = CultureInfo.GetCultureInfo("vi-VN");
+    string Money(decimal v) => v.ToString("#,0", vi);
+}
+
+<div class="mgr-wrap invoice-wrap invoice-full booking-wrap">
+
+    <!-- Chip -->
+    <div class="mgr-head booking-topbar">
+        <h2 class="booking-heading">
+            <i class="fas fa-bed"></i>
+            <span>Quản Lý Đặt Phòng</span>
+        </h2>
+
+
+        <div class="mgr-kpis kpis-inline" id="kpiChips">
+            <button type="button" class="chip chip-btn" data-kpi="all" title="Xem tất cả">
+                <span class="dot" style="background:#212529"></span> Tổng: @total
+            </button>
+
+            <button type="button" class="chip chip-btn" data-kpi="dat" title="Lọc: Đã đặt">
+                <span class="dot" style="background:#0d6efd"></span> Đã đặt: @cDat
+            </button>
+
+            <button type="button" class="chip chip-btn" data-kpi="nhan" title="Lọc: Đã nhận">
+                <span class="dot" style="background:#198754"></span> Đã nhận: @cNhan
+            </button>
+
+            <button type="button" class="chip chip-btn" data-kpi="tra" title="Lọc: Đã trả">
+                <span class="dot" style="background:#6c757d"></span> Đã trả: @cTra
+            </button>
+
+            <button type="button" class="chip chip-btn" data-kpi="huy" title="Lọc: Đã hủy">
+                <span class="dot" style="background:#dc3545"></span> Đã hủy: @cHuy
+            </button>
+
+            <button type="button" class="chip" title="Doanh thu (đã thanh toán)">
+                <span class="dot" style="background:#0b2e59"></span> Doanh thu (đã TT): @Money(revenue)
+            </button>
+        </div>
+    </div>
+
+    <!-- Toolbar -->
+    <div class="mgr-toolbar invoice-toolbar">
+        <select id="pageSize" class="inv-select inv-mini" title="Hiển thị">
+            <option value="999999" selected>Hiển thị tất cả</option>
+            <option value="10">Hiển thị 10</option>
+            <option value="25">Hiển thị 25</option>
+            <option value="50">Hiển thị 50</option>
+            <option value="100">Hiển thị 100</option>
+        </select>
+
+        <input id="qFilter" class="inv-search" type="text" value="@q0"
+               placeholder="Tìm (khách/username/sđt/phòng)..." />
+
+        <select id="statusFilter" class="inv-select">
+            <option value="">-- Trạng thái --</option>
+            @foreach (var st in Enum.GetValues(typeof(TrangThaiDatPhong)).Cast<TrangThaiDatPhong>())
+            {
+                var v = (int)st;
+                <option value="@v" selected="@(st0.HasValue && st0.Value == st ? "selected" : (string?)null)">
+                    @st.GetDisplayName()
+                </option>
+            }
+        </select>
+
+        <input id="fromDate" class="inv-date" type="date" value="@tuNgay0" />
+        <input id="toDate" class="inv-date" type="date" value="@denNgay0" />
+
+        <select id="sortBy" class="inv-select inv-sort" title="Sắp xếp">
+            <option value="date_desc" selected>Mới nhất</option>
+            <option value="date_asc">Cũ nhất</option>
+            <option value="money_desc">Tiền cao</option>
+            <option value="money_asc">Tiền thấp</option>
+        </select>
+
+        <div class="toolbar-right">
+            <a class="btnx primary" asp-action="Create" title="Tạo đặt phòng">
+                <i class="fas fa-plus"></i> Tạo đặt phòng
+            </a>
+
+            <button class="btnx" type="button" id="btnReset" title="Reset">
+                Reset
+            </button>
+        </div>
+    </div>
+
+    <!-- Table -->
+    <div class="mgr-table-scroll">
+        <table class="mgr-table" id="tblBookings">
+            <thead>
+                <tr>
+                    <th style="width:70px;">#</th>
+                    <th style="width:90px;">Mã</th>
+                    <th class="col-khach">Khách</th>
+                    <th style="width:90px;">Phòng</th>
+                    <th style="width:120px;">Loại</th>
+                    <th style="width:120px;">Nhận</th>
+                    <th style="width:120px;">Trả</th>
+                    <th style="width:80px;">Đêm</th>
+                    <th style="width:140px;">Tổng</th>
+                    <th style="width:140px;">Trạng thái</th>
+                    <th style="width:160px;">Thanh toán</th>
+                    <th style="width:260px;" class="col-actions">Thao tác</th>
+                </tr>
+            </thead>
+
+            <tbody>
+                @{
+                    var idx = 0;
+                }
+                @foreach (var dp in Model)
+                {
+                    idx++;
+
+                    var kh = dp.KhachHang;
+                    var phong = dp.Phong;
+                    var lp = dp.Phong?.LoaiPhong;
+                    var hd = dp.HoaDon;
+
+                    var searchKey = ($"{dp.Id} {kh?.HoTen} {kh?.TenDangNhap} {kh?.SoDienThoai} {phong?.SoPhong} {lp?.TenLoai}")
+                    .ToLowerInvariant();
+
+                    string bClass =
+                    dp.TrangThai == TrangThaiDatPhong.DaDat ? "pill b-blue" :
+                    dp.TrangThai == TrangThaiDatPhong.DaNhanPhong ? "pill b-green" :
+                    dp.TrangThai == TrangThaiDatPhong.DaTraPhong ? "pill b-gray" :
+                    "pill b-red";
+
+                    string payText = "Chưa thanh toán";
+                    string payClass = "pill p-unpay";
+
+                    if (dp.TrangThai == TrangThaiDatPhong.DaHuy)
+                    {
+                        payText = "Đã hủy";
+                        payClass = "pill p-cancel";
+                    }
+                    else if (hd != null)
+                    {
+                        if (hd.TrangThai == TrangThaiHoaDon.DaThanhToan)
+                        {
+                            payText = "Đã thanh toán";
+                            payClass = "pill p-paid";
+                        }
+                        else if (hd.TrangThai == TrangThaiHoaDon.DaHuy)
+                        {
+                            payText = "Đã hủy";
+                            payClass = "pill p-cancel";
+                        }
+                        else
+                        {
+                            payText = "Chưa thanh toán";
+                            payClass = "pill p-unpay";
+                        }
+                    }
+
+                    var ngayNhan = dp.NgayNhanPhong.ToString("yyyy-MM-dd");
+                    var ngayTra = dp.NgayTraPhong.ToString("yyyy-MM-dd");
+                    var ngayDat = dp.NgayDat.ToString("yyyy-MM-dd");
+
+                    <tr class="booking-row"
+                        data-id="@dp.Id"
+                        data-money="@dp.TongTien"
+                        data-status="@((int)dp.TrangThai)"
+                        data-date="@ngayNhan"
+                        data-created="@ngayDat"
+                        data-search="@searchKey">
+
+                        <td>@idx</td>
+                        <td><b>@dp.Id</b></td>
+
+                        <td class="col-khach">
+                            <div class="khach-cell">
+                                <div class="khach-name">
+                                    @(kh?.HoTen ?? "-") <span class="sub">(@(kh?.TenDangNhap ?? "-"))</span>
+                                </div>
+                                <div class="khach-phone">@(kh?.SoDienThoai ?? "")</div>
+                            </div>
+                        </td>
+
+                        <td>@(phong?.SoPhong ?? "-")</td>
+                        <td>@(lp?.TenLoai ?? "-")</td>
+
+                        <td>@ngayNhan</td>
+                        <td>@ngayTra</td>
+
+                        <td>@dp.SoDem</td>
+                        <td class="money">@Money(dp.TongTien)</td>
+
+                        <td><span class="@bClass">@dp.TrangThai.GetDisplayName()</span></td>
+                        <td><span class="@payClass">@payText</span></td>
+
+                        <td class="col-actions">
+                            <div class="booking-actions-grid">
+
+                                <!-- Slot 1: xem -->
+                                <a class="iconbtn" asp-action="Details" asp-route-id="@dp.Id" title="Chi tiết">
+                                    <i class="fas fa-eye"></i>
+                                </a>
+
+                                @* Nếu đang "Đã nhận phòng" => có select + nút Check-out *@
+                                @if (dp.TrangThai == TrangThaiDatPhong.DaNhanPhong)
+                                {
+                                    <form asp-action="CheckOut" method="post" class="grid-form">
+                                        @Html.AntiForgeryToken()
+                                        <input type="hidden" name="id" value="@dp.Id" />
+
+                                        <!-- Slot 2: phương thức -->
+                                        <select name="phuongThuc" class="mini-select slot-method" title="Phương thức">
+                                            <option value="@((int)PhuongThucThanhToan.TienMat)">Tiền mặt</option>
+                                            <option value="@((int)PhuongThucThanhToan.ChuyenKhoan)">Chuyển khoản</option>
+                                        </select>
+
+                                        <!-- Slot 3: action -->
+                                        <button class="actbtn warn slot-action" type="submit"
+                                                onclick="return confirm('Check-out và thanh toán hóa đơn?');">
+                                            <i class="fas fa-door-open"></i> Check-out
+                                        </button>
+                                    </form>
+                                }
+                                else
+                                {
+                                    <!-- Slot 2: không có phương thức -->
+                                    <span class="slot-empty slot-method">—</span>
+
+                                    @* Nếu "Đã đặt" => có Check-in *@
+                                    @if (dp.TrangThai == TrangThaiDatPhong.DaDat)
+                                    {
+                                        <form asp-action="CheckIn" method="post" class="grid-form">
+                                            @Html.AntiForgeryToken()
+                                            <input type="hidden" name="id" value="@dp.Id" />
+
+                                            <button class="actbtn ok slot-action" type="submit"
+                                                    onclick="return confirm('Check-in đơn này?');">
+                                                <i class="fas fa-right-to-bracket"></i> Check-in
+                                            </button>
+                                        </form>
+                                    }
+                                    else
+                                    {
+                                        <!-- Slot 3: không có action -->
+                                        <span class="slot-empty slot-action">—</span>
+                                    }
+                                }
+
+                            </div>
+                        </td>
+
+
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+
+</div>
+
+<script>
+    (function () {
+        const tbl = document.getElementById('tblBookings');
+        const tbody = tbl.querySelector('tbody');
+        const rows = Array.from(tbody.querySelectorAll('tr.booking-row'));
+
+        const pageSizeSel = document.getElementById('pageSize');
+        const qFilter = document.getElementById('qFilter');
+        const statusFilter = document.getElementById('statusFilter');
+        const fromDate = document.getElementById('fromDate');
+        const toDate = document.getElementById('toDate');
+        const sortBy = document.getElementById('sortBy');
+
+        const btnReset = document.getElementById('btnReset');
+        const kpiChips = document.getElementById('kpiChips');
+
+        function parseDate(s) {
+            if (!s) return null;
+            return new Date(s + 'T00:00:00');
+        }
+
+        function getFiltered() {
+            const q = (qFilter.value || '').trim().toLowerCase();
+            const st = statusFilter.value;
+            const f = parseDate(fromDate.value);
+            const t = parseDate(toDate.value);
+
+            let filtered = rows.filter(r => {
+                if (q) {
+                    const hay = (r.getAttribute('data-search') || '');
+                    if (!hay.includes(q)) return false;
+                }
+
+                if (st) {
+                    if (String(r.getAttribute('data-status')) !== String(st)) return false;
+                }
+
+                if (f || t) {
+                    const dStr = r.getAttribute('data-date'); // ngày nhận
+                    if (!dStr) return false;
+                    const d = parseDate(dStr);
+                    if (f && d < f) return false;
+                    if (t && d > t) return false;
+                }
+
+                return true;
+            });
+
+            const s = sortBy.value;
+            filtered.sort((a, b) => {
+                const ma = parseFloat(a.getAttribute('data-money') || '0');
+                const mb = parseFloat(b.getAttribute('data-money') || '0');
+
+                const ca = a.getAttribute('data-created') || '';
+                const cb = b.getAttribute('data-created') || '';
+                const da = ca ? new Date(ca + 'T00:00:00').getTime() : 0;
+                const db = cb ? new Date(cb + 'T00:00:00').getTime() : 0;
+
+                switch (s) {
+                    case 'date_asc': return da - db;
+                    case 'date_desc': return db - da;
+                    case 'money_asc': return ma - mb;
+                    case 'money_desc': return mb - ma;
+                    default: return db - da;
+                }
+            });
+
+            return filtered;
+        }
+
+        function render() {
+            const pageSize = parseInt(pageSizeSel.value || '999999', 10);
+            const filtered = getFiltered();
+
+            // hide all
+            rows.forEach(r => r.style.display = 'none');
+
+            // show rows
+            const showRows = (pageSize >= 999999)
+                ? filtered
+                : filtered.slice(0, Math.min(pageSize, filtered.length));
+
+            // reorder trong tbody theo sort
+            showRows.forEach(r => {
+                r.style.display = '';
+                tbody.appendChild(r);
+            });
+
+            // reindex cột #
+            let idx = 1;
+            rows.forEach(r => {
+                if (r.style.display !== 'none') r.children[0].textContent = idx++;
+            });
+        }
+
+        // events
+        pageSizeSel.addEventListener('change', render);
+        qFilter.addEventListener('input', render);
+        statusFilter.addEventListener('change', render);
+        fromDate.addEventListener('change', render);
+        toDate.addEventListener('change', render);
+        sortBy.addEventListener('change', render);
+
+        btnReset.addEventListener('click', () => {
+            qFilter.value = '';
+            statusFilter.value = '';
+            fromDate.value = '';
+            toDate.value = '';
+            sortBy.value = 'date_desc';
+            pageSizeSel.value = '999999';
+            render();
+        });
+
+        // chip click -> lọc trạng thái nhanh
+        if (kpiChips) {
+            kpiChips.addEventListener('click', (e) => {
+                const btn = e.target.closest('.chip-btn');
+                if (!btn) return;
+
+                const k = btn.getAttribute('data-kpi');
+                if (!k || k === 'all') {
+                    statusFilter.value = '';
+                    render();
+                    return;
+                }
+
+                const findStatusValue = (want) => {
+                    for (const r of rows) {
+                        const s = String(r.getAttribute('data-status') || '');
+                        if (want === 'dat' && r.querySelector('.b-blue')) return s;
+                        if (want === 'nhan' && r.querySelector('.b-green')) return s;
+                        if (want === 'tra' && r.querySelector('.b-gray')) return s;
+                        if (want === 'huy' && r.querySelector('.b-red')) return s;
+                    }
+                    return '';
+                };
+
+                statusFilter.value = findStatusValue(k);
+                render();
+            });
+        }
+
+        render();
+    })();
+</script>

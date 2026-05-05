@@ -1,0 +1,184 @@
+﻿@model QLKS.Models.Phong
+@using QLKS.Models
+
+@{
+    ViewData["Title"] = "";
+}
+
+@section Styles {
+    <link rel="stylesheet" href="~/adminlte/css/admin-room.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/adminlte/css/admin-room-form.css" asp-append-version="true" />
+}
+
+<div class="mgr-wrap invoice-wrap invoice-full room-wrap room-form">
+
+    <div class="mgr-head room-topbar">
+        <h2 class="room-heading">
+            <i class="fas fa-pen"></i>
+            <span>Sửa phòng</span>
+            <span class="pill r-blue" style="margin-left:10px;">@Model.SoPhong</span>
+        </h2>
+
+        <div class="toolbar-right">
+            <a class="btnx" asp-action="Details" asp-route-id="@Model.Id">
+                <i class="fas fa-eye"></i> Chi tiết
+            </a>
+            <a class="btnx" asp-action="Index">
+                <i class="fas fa-arrow-left"></i> Quay lại
+            </a>
+        </div>
+    </div>
+
+    <div class="rf-body">
+        <form asp-action="Edit" method="post">
+            @Html.AntiForgeryToken()
+            <input type="hidden" asp-for="Id" />
+
+            <div class="rf-grid">
+                <!-- LEFT: form -->
+                <div class="rf-panel">
+                    <div class="rf-panel-hd">
+                        <i class="fas fa-sliders-h"></i> Cập nhật thông tin
+                    </div>
+
+                    <div class="rf-panel-bd">
+                        <div asp-validation-summary="ModelOnly" class="rf-valsum"></div>
+
+                        <div class="rf-row">
+                            <div class="rf-field">
+                                <label class="rf-label">Số phòng</label>
+                                <input asp-for="SoPhong" class="rf-input" />
+                                <span asp-validation-for="SoPhong" class="rf-val"></span>
+                            </div>
+
+                            <div class="rf-field">
+                                <label class="rf-label">Tầng</label>
+                                <input asp-for="Tang" class="rf-input" type="number" min="1" max="200" />
+                                <span asp-validation-for="Tang" class="rf-val"></span>
+                            </div>
+                        </div>
+
+                        <div class="rf-row" style="margin-top:12px;">
+                            <div class="rf-field">
+                                <label class="rf-label">Trạng thái</label>
+                                <select asp-for="TrangThai" class="rf-select"
+                                        asp-items="Html.GetEnumSelectList<TrangThaiPhong>()"></select>
+                                <span asp-validation-for="TrangThai" class="rf-val"></span>
+                            </div>
+
+                            <div class="rf-field">
+                                <label class="rf-label">Loại phòng</label>
+                                <select asp-for="LoaiPhongId" class="rf-select" asp-items="ViewBag.LoaiPhongId"></select>
+                                <span asp-validation-for="LoaiPhongId" class="rf-val"></span>
+                            </div>
+                        </div>
+
+                        <div style="margin-top:12px;" class="rf-note">
+                            Tip: Nếu phòng đang có khách, đừng set về <b>Trống</b> khi chưa trả phòng.
+                        </div>
+                    </div>
+
+                    <div class="rf-footer">
+                        <button type="submit" class="btnx primary">
+                            <i class="fas fa-save"></i> Lưu thay đổi
+                        </button>
+                        <a class="btnx" asp-action="Index">Hủy</a>
+                    </div>
+                </div>
+
+                <!-- RIGHT: preview + quick actions -->
+                <div class="rf-panel">
+                    <div class="rf-panel-hd">
+                        <i class="fas fa-bolt"></i> Xem nhanh
+                    </div>
+
+                    <div class="rf-panel-bd">
+                        <div class="rf-summary-title">Tóm tắt</div>
+                        <div class="rf-summary-big" id="pvRoom">Phòng: @Model.SoPhong</div>
+
+                        <div class="rf-kv">
+                            <div class="rf-k">ID</div>
+                            <div class="rf-v">#@Model.Id</div>
+                        </div>
+
+                        <div class="rf-kv">
+                            <div class="rf-k">Tầng</div>
+                            <div class="rf-v" id="pvFloor">@Model.Tang</div>
+                        </div>
+
+                        <div class="rf-kv">
+                            <div class="rf-k">Loại phòng</div>
+                            <div class="rf-v" id="pvType">-</div>
+                        </div>
+
+                        <div class="rf-kv">
+                            <div class="rf-k">Trạng thái</div>
+                            <div class="rf-v">
+                                <span class="pill r-green" id="pvStatus">-</span>
+                            </div>
+                        </div>
+
+                        <div class="rf-note" style="margin-top:12px;">
+                            Nhanh: xem <b>Chi tiết</b> để kiểm tra loại phòng/giá/số người.
+                        </div>
+
+                        <div class="rf-footer" style="justify-content:flex-start; padding:0; border:0; background:transparent; margin-top:12px;">
+                            <a class="btnx" asp-action="Delete" asp-route-id="@Model.Id">
+                                <i class="fas fa-trash"></i> Xóa phòng
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </form>
+    </div>
+
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+
+    <script>
+        (function () {
+            const soPhong = document.getElementById('SoPhong');
+            const tang = document.getElementById('Tang');
+            const loai = document.getElementById('LoaiPhongId');
+            const st = document.getElementById('TrangThai');
+
+            const pvRoom = document.getElementById('pvRoom');
+            const pvFloor = document.getElementById('pvFloor');
+            const pvType = document.getElementById('pvType');
+            const pvStatus = document.getElementById('pvStatus');
+
+            function statusClass(text) {
+                const t = (text || '').toLowerCase();
+                if (t.includes('trống')) return 'pill r-green';
+                if (t.includes('đang')) return 'pill r-blue';
+                return 'pill r-yellow';
+            }
+
+            function render() {
+                const rp = (soPhong?.value || '').trim();
+                pvRoom.textContent = rp ? `Phòng: ${rp}` : 'Phòng: (chưa nhập)';
+
+                pvFloor.textContent = (tang?.value || '').trim() || '-';
+
+                const typeText = loai?.selectedOptions?.[0]?.textContent?.trim() || '-';
+                pvType.textContent = typeText;
+
+                const stText = st?.selectedOptions?.[0]?.textContent?.trim() || '-';
+                pvStatus.textContent = stText;
+                pvStatus.className = statusClass(stText);
+            }
+
+            ['input', 'change'].forEach(ev => {
+                soPhong?.addEventListener(ev, render);
+                tang?.addEventListener(ev, render);
+                loai?.addEventListener(ev, render);
+                st?.addEventListener(ev, render);
+            });
+
+            render();
+        })();
+    </script>
+}

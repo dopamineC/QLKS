@@ -1,0 +1,94 @@
+@model QLKS.Models.DatPhong
+@using System.Globalization
+
+@{
+    ViewData["Title"] = "";
+    var vi = CultureInfo.GetCultureInfo("vi-VN");
+    string Money(decimal v) => v.ToString("#,0", vi);
+    string DateFmt(DateTime d) => d.ToString("dd/MM/yyyy", vi);
+}
+
+<div class="mgr-wrap invoice-wrap invoice-full booking-wrap crud-page">
+    <div class="mgr-head booking-topbar">
+        <h2 class="booking-heading">
+            <i class="fas fa-trash-alt"></i>
+            <span>Xóa đặt phòng #@Model.Id</span>
+        </h2>
+
+        <div class="rt-top-actions">
+            <a class="btnx" asp-action="Details" asp-route-id="@Model.Id" title="Chi tiết">
+                <i class="fas fa-eye"></i> Chi tiết
+            </a>
+            <a class="btnx" asp-action="Index" title="Quay lại">
+                <i class="fas fa-arrow-left"></i> Quay lại
+            </a>
+        </div>
+    </div>
+
+    <div class="crud-body">
+        <div class="danger-box mb-3">
+            <i class="fas fa-exclamation-triangle me-1"></i>
+            Bạn chắc chắn muốn <b>xóa</b> đặt phòng này? Hành động này <b>không thể hoàn tác</b>.
+        </div>
+
+        <div class="crud-grid">
+            <div class="crud-card">
+                <div class="crud-card-hd">
+                    <h3 class="ttl"><i class="fas fa-clipboard-check"></i> Thông tin booking</h3>
+                    <span class="hint">Xem lại trước khi xóa</span>
+                </div>
+
+                <div class="crud-card-bd">
+                    <div class="kv">
+                        <div class="k">Khách</div>
+                        <div class="v">@Model.KhachHang?.HoTen</div>
+
+                        <div class="k">Phòng</div>
+                        <div class="v">@Model.Phong?.SoPhong <span class="hint">— @Model.Phong?.LoaiPhong?.TenLoai</span></div>
+
+                        <div class="k">Ngày nhận</div>
+                        <div class="v">@DateFmt(Model.NgayNhanPhong)</div>
+
+                        <div class="k">Ngày trả</div>
+                        <div class="v">@DateFmt(Model.NgayTraPhong)</div>
+
+                        <div class="k">Số đêm</div>
+                        <div class="v">@Model.SoDem</div>
+
+                        <div class="k">Tổng tiền</div>
+                        <div class="v">@Money(Model.TongTien) đ</div>
+                    </div>
+
+                    <div class="crud-actions">
+                        <form asp-action="Delete" method="post" class="d-inline">
+                            @Html.AntiForgeryToken()
+                            <input type="hidden" asp-for="Id" />
+                            <button class="btn btn-danger" type="submit">
+                                <i class="fas fa-trash me-1"></i> Xóa
+                            </button>
+                        </form>
+
+                        <a class="btn btn-outline-secondary" asp-action="Details" asp-route-id="@Model.Id">
+                            <i class="fas fa-times me-1"></i> Hủy
+                        </a>
+                    </div>
+                </div>
+            </div>
+
+            <div class="crud-card">
+                <div class="crud-card-hd">
+                    <h3 class="ttl"><i class="fas fa-info-circle"></i> Lưu ý</h3>
+                    <span class="hint">Nghiệp vụ</span>
+                </div>
+
+                <div class="crud-card-bd">
+                    <ul class="mb-0 ps-3">
+                        <li class="mb-2">Nếu booking đã <b>check-in</b> hoặc đã <b>thanh toán</b>, cân nhắc <b>không xóa</b> để giữ lịch sử.</li>
+                        <li class="mb-2">Nếu cần “hủy” thay vì “xóa”, bạn có thể thêm chức năng <b>Hủy đặt phòng</b> để giữ dữ liệu.</li>
+                        <li class="mb-0">Xóa booking có thể làm mất liên kết hóa đơn.</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

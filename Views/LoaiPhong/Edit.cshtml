@@ -1,0 +1,157 @@
+﻿@model QLKS.Models.LoaiPhong
+
+@{
+    ViewData["Title"] = "";
+    var placeholder = Url.Content("~/adminlte/assets/img/default-150x150.png");
+    var currentImg = string.IsNullOrWhiteSpace(Model.HinhAnh) ? placeholder : Model.HinhAnh;
+}
+
+@section Styles {
+    <link rel="stylesheet" href="~/adminlte/css/admin-roomtype.css" asp-append-version="true" />
+}
+
+<div class="mgr-wrap invoice-wrap invoice-full type-wrap type-form">
+
+    <div class="mgr-head invoice-topbar">
+        <h2 class="invoice-heading">
+            <i class="fas fa-pen"></i>
+            <span>Sửa loại phòng</span>
+        </h2>
+
+        <div class="rt-top-actions">
+            <a class="btnx" asp-action="Index" title="Quay lại">
+                <i class="fas fa-arrow-left"></i> Quay lại
+            </a>
+            <a class="btnx danger" asp-action="Delete" asp-route-id="@Model.Id" title="Xóa">
+                <i class="fas fa-trash"></i> Xóa
+            </a>
+        </div>
+    </div>
+
+    <div class="rt-body">
+        <form asp-action="Edit" method="post" enctype="multipart/form-data" novalidate>
+            @Html.AntiForgeryToken()
+            <input type="hidden" asp-for="Id" />
+
+            <div asp-validation-summary="ModelOnly" class="rt-valsum"></div>
+
+            <div class="rt-grid">
+
+                <!-- LEFT -->
+                <div class="rt-panel">
+                    <div class="rt-panel-hd">
+                        <div class="rt-panel-title">
+                            <i class="fas fa-clipboard-list"></i> Thông tin loại phòng
+                        </div>
+                    </div>
+
+                    <div class="rt-panel-bd">
+
+                        <div class="rt-field">
+                            <label class="rt-label">Tên loại</label>
+                            <input class="rt-input" asp-for="TenLoai" />
+                            <span class="rt-val" asp-validation-for="TenLoai"></span>
+                        </div>
+
+                        <div class="rt-row">
+                            <div class="rt-field">
+                                <label class="rt-label">Giá/đêm (VND)</label>
+                                <input class="rt-input"
+                                       asp-for="GiaMoiDem"
+                                       type="number"
+                                       min="1000"
+                                       step="1000"
+                                       data-msg-min="Giá/đêm phải từ 1.000đ trở lên."
+                                       data-msg-number="Giá/đêm phải là số."
+                                       data-msg-step="Giá/đêm phải là bội số của 1.000." />
+                                <span class="rt-val" asp-validation-for="GiaMoiDem"></span>
+                            </div>
+
+                            <div class="rt-field">
+                                <label class="rt-label">Số người</label>
+                                <input class="rt-input"
+                                       asp-for="SoNguoi"
+                                       type="number"
+                                       min="1"
+                                       step="1"
+                                       data-msg-min="Số người phải từ 1 trở lên."
+                                       data-msg-number="Số người phải là số." />
+                                <span class="rt-val" asp-validation-for="SoNguoi"></span>
+                            </div>
+
+                            <div class="rt-field">
+                                <label class="rt-label">Gợi ý</label>
+                                <div class="rt-help" style="padding:10px 12px; border:1px dashed #d0d0d0; border-radius:12px;">
+                                    Nếu không chọn ảnh mới thì giữ nguyên ảnh cũ.
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="rt-field" style="margin-bottom:0;">
+                            <label class="rt-label">Mô tả</label>
+                            <textarea class="rt-textarea" asp-for="MoTa"></textarea>
+                            <span class="rt-val" asp-validation-for="MoTa"></span>
+                        </div>
+
+                    </div>
+
+                    <div class="rt-footer">
+                        <button type="submit" class="btnx primary">
+                            <i class="fas fa-save"></i> Lưu thay đổi
+                        </button>
+                        <a class="btnx" asp-action="Index">Hủy</a>
+                    </div>
+                </div>
+
+                <!-- RIGHT -->
+                <div class="rt-panel">
+                    <div class="rt-panel-hd">
+                        <div class="rt-panel-title">
+                            <i class="fas fa-image"></i> Ảnh loại phòng
+                        </div>
+                    </div>
+
+                    <div class="rt-panel-bd">
+                        <div class="rt-field">
+                            <label class="rt-label">Đổi ảnh (upload)</label>
+                            <input class="rt-file" type="file" name="fileAnh" id="fileAnh" accept="image/*" />
+                            @Html.ValidationMessage("fileAnh", "", new { @class = "rt-val" })
+                            <div class="rt-help">Chấp nhận .jpg/.jpeg/.png/.webp, tối đa 2MB</div>
+                        </div>
+
+                        <div class="rt-preview">
+                            <img id="previewImg" src="@currentImg" alt="Preview" />
+                            <div class="rt-preview-cap">
+                                <span>Ảnh hiện tại / Xem trước</span>
+                                <small>click ảnh để mở</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </form>
+    </div>
+
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+    <script>
+        (function () {
+            const input = document.getElementById("fileAnh");
+            const img = document.getElementById("previewImg");
+            if (!input || !img) return;
+
+            input.addEventListener("change", function () {
+                const file = this.files && this.files[0];
+                if (!file) return;
+                img.src = URL.createObjectURL(file);
+            });
+
+            img.addEventListener("click", function () {
+                window.open(img.src, "_blank");
+            });
+        })();
+    </script>
+}

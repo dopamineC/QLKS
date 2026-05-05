@@ -1,0 +1,260 @@
+﻿@{
+    var title = ViewData["Title"] as string ?? "Admin";
+    var ctrl = (ViewContext.RouteData.Values["controller"] ?? "").ToString();
+
+    string Active(string c) => string.Equals(ctrl, c, StringComparison.OrdinalIgnoreCase) ? "active" : "";
+
+    var userName = User?.Identity?.Name ?? "Admin";
+    var initial = string.IsNullOrWhiteSpace(userName)
+        ? "A"
+        : userName.Trim()[0].ToString().ToUpperInvariant();
+}
+
+<!doctype html>
+<html lang="vi">
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+    <title>@title - QLKS Admin</title>
+
+    <link rel="stylesheet" href="~/adminlte/css/admin-booking.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/adminlte/css/admin-invoice.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/adminlte/css/admin-crud.css" asp-append-version="true" />
+
+    <!-- Font (optional) -->
+    <link rel="stylesheet"
+          href="https://cdn.jsdelivr.net/npm/@@fontsource/source-sans-3@5.0.12/index.css"
+          crossorigin="anonymous" />
+
+    <!-- Font Awesome (để dùng các class .fas .fa-... trong views) -->
+    <link rel="stylesheet"
+          href="https://cdn.jsdelivr.net/npm/@@fortawesome/fontawesome-free@5.15.4/css/all.min.css"
+          crossorigin="anonymous" />
+
+    <!-- OverlayScrollbars (optional - sidebar scroll mượt hơn) -->
+    <link rel="stylesheet"
+          href="https://cdn.jsdelivr.net/npm/overlayscrollbars@2.11.0/styles/overlayscrollbars.min.css"
+          crossorigin="anonymous" />
+
+    <!-- AdminLTE v4 CSS (đã copy vào wwwroot/adminlte/css) -->
+    <link rel="stylesheet" href="~/adminlte/css/adminlte.min.css" asp-append-version="true" />
+
+    <!-- Custom tweaks -->
+    <link rel="stylesheet" href="~/adminlte/css/qlks-adminlte.css" asp-append-version="true" />
+
+    @RenderSection("Styles", required: false)
+</head>
+
+<body class="layout-fixed sidebar-expand-lg sidebar-open bg-body-tertiary">
+    <div class="app-wrapper">
+
+        <!-- Header / Topbar -->
+        <nav class="app-header navbar navbar-expand bg-body">
+            <div class="container-fluid">
+                <ul class="navbar-nav">
+                    <li class="nav-item">
+                        <a class="nav-link" data-lte-toggle="sidebar" href="#" role="button">
+                            <i class="fas fa-bars"></i>
+                        </a>
+                    </li>
+                </ul>
+
+                <ul class="navbar-nav ms-auto">
+                    <li class="nav-item dropdown user-menu">
+                        <a href="#" class="nav-link dropdown-toggle" data-bs-toggle="dropdown">
+                            <span class="d-inline-flex align-items-center gap-2">
+                                <span class="qlks-avatar-sm">@initial</span>
+                                <span class="d-none d-md-inline">@userName</span>
+                            </span>
+                        </a>
+                        <ul class="dropdown-menu dropdown-menu-lg dropdown-menu-end">
+                            <li class="user-header text-bg-primary">
+                                <div class="qlks-avatar">@initial</div>
+                                <p class="mb-0">
+                                    <strong>@userName</strong>
+                                    <small class="d-block">Quản trị hệ thống</small>
+                                </p>
+                            </li>
+                            <li class="user-footer d-flex justify-content-between gap-2">
+                                <a asp-controller="Home" asp-action="Index" class="btn btn-outline-secondary btn-sm">Về trang web</a>
+                                <form asp-controller="Account" asp-action="Logout" method="post" class="m-0">
+                                    @Html.AntiForgeryToken()
+                                    <button type="submit" class="btn btn-danger btn-sm">Đăng xuất</button>
+                                </form>
+                            </li>
+                        </ul>
+                    </li>
+                </ul>
+            </div>
+        </nav>
+
+        <!-- Sidebar -->
+        <aside class="app-sidebar bg-body-secondary shadow" data-bs-theme="dark">
+            <div class="sidebar-brand">
+                <a asp-controller="Dashboard" asp-action="Index" class="brand-link">
+                    <span class="brand-text fw-light">QLKS Admin</span>
+                </a>
+            </div>
+
+            <div class="sidebar-wrapper">
+                <nav class="mt-2">
+                    <ul class="nav sidebar-menu flex-column"
+                        data-lte-toggle="treeview"
+                        role="navigation"
+                        aria-label="Main navigation"
+                        data-accordion="false">
+
+                        <li class="nav-item">
+                            <a asp-controller="Dashboard" asp-action="Index" class="nav-link @Active("Dashboard")">
+                                <i class="nav-icon fas fa-home"></i>
+                                <p>Dashboard</p>
+                            </a>
+                        </li>
+
+                        <li class="nav-item">
+                            <a asp-controller="LoaiPhong" asp-action="Index" class="nav-link @Active("LoaiPhong")">
+                                <i class="nav-icon fas fa-layer-group"></i>
+                                <p>Loại phòng</p>
+                            </a>
+                        </li>
+
+                        <li class="nav-item">
+                            <a asp-controller="Phong" asp-action="Index" class="nav-link @Active("Phong")">
+                                <i class="nav-icon fas fa-door-open"></i>
+                                <p>Phòng</p>
+                            </a>
+                        </li>
+
+                        <li class="nav-item">
+                            <a asp-controller="AdminBooking" asp-action="Index" class="nav-link @Active("AdminBooking")">
+                                <i class="nav-icon fas fa-calendar-check"></i>
+                                <p>Đặt phòng</p>
+                            </a>
+                        </li>
+
+                        <li class="nav-item">
+                            <a asp-controller="NguoiDung" asp-action="Index" class="nav-link @Active("NguoiDung")">
+                                <i class="nav-icon fas fa-users"></i>
+                                <p>Người dùng</p>
+                            </a>
+                        </li>
+
+                        <li class="nav-item">
+                            <a asp-controller="AdminHoaDon" asp-action="Index" class="nav-link @Active("AdminHoaDon")">
+                                <i class="nav-icon fas fa-file-invoice-dollar"></i>
+                                <p>Hóa đơn</p>
+                            </a>
+                        </li>
+
+                        <li class="nav-item">
+                            <a asp-controller="AdminLichDatPhong" asp-action="Index" class="nav-link @Active("AdminLichDatPhong")">
+                                <i class="nav-icon fas fa-calendar-alt"></i>
+                                <p>Lịch đặt phòng</p>
+                            </a>
+                        </li>
+
+                        <li class="nav-item mt-2">
+                            <a asp-controller="Home" asp-action="Index" class="nav-link">
+                                <i class="nav-icon fas fa-arrow-left"></i>
+                                <p>Về trang web</p>
+                            </a>
+                        </li>
+
+                    </ul>
+                </nav>
+            </div>
+        </aside>
+
+        <!-- Main -->
+        <main class="app-main">
+
+            <div class="app-content-header">
+                <div class="container-fluid">
+                    <div class="row">
+                        <div class="col-sm-12">
+                            <h3 class="mb-0">@title</h3>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="app-content">
+                <div class="container-fluid">
+
+                    @* ===== Alerts (TempData) ===== *@
+                    @if (TempData["success"] != null)
+                    {
+                        <div class="alert alert-success alert-dismissible fade show" role="alert">
+                            @TempData["success"]
+                            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                        </div>
+                    }
+                    @if (TempData["msg"] != null)
+                    {
+                        <div class="alert alert-info alert-dismissible fade show" role="alert">
+                            @TempData["msg"]
+                            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                        </div>
+                    }
+                    @if (TempData["warning"] != null)
+                    {
+                        <div class="alert alert-warning alert-dismissible fade show" role="alert">
+                            @TempData["warning"]
+                            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                        </div>
+                    }
+                    @if (TempData["error"] != null)
+                    {
+                        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                            @TempData["error"]
+                            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                        </div>
+                    }
+
+                    @RenderBody()
+                </div>
+            </div>
+
+        </main>
+
+        <!-- Footer -->
+        <footer class="app-footer">
+            <strong>© @DateTime.Now.Year - QLKS Admin</strong>
+        </footer>
+
+    </div>
+
+    <!-- Scripts -->
+    <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js" asp-append-version="true"></script>
+
+    <!-- Chart.js (chỉ dùng 1 bản) -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js" crossorigin="anonymous"></script>
+
+    <!-- OverlayScrollbars (optional) -->
+    <script src="https://cdn.jsdelivr.net/npm/overlayscrollbars@2.11.0/browser/overlayscrollbars.browser.es6.min.js" crossorigin="anonymous"></script>
+
+    <!-- AdminLTE v4 JS -->
+    <script src="~/adminlte/js/adminlte.min.js" asp-append-version="true"></script>
+
+    <script>
+        (function () {
+            const SELECTOR = '.sidebar-wrapper';
+            document.addEventListener('DOMContentLoaded', function () {
+                const sidebarWrapper = document.querySelector(SELECTOR);
+                if (sidebarWrapper && window.OverlayScrollbarsGlobal && OverlayScrollbarsGlobal.OverlayScrollbars) {
+                    OverlayScrollbarsGlobal.OverlayScrollbars(sidebarWrapper, {
+                        scrollbars: {
+                            theme: 'os-theme-light',
+                            autoHide: 'leave',
+                            clickScroll: true,
+                        },
+                    });
+                }
+            });
+        })();
+    </script>
+
+    @RenderSection("Scripts", required: false)
+</body>
+</html>

@@ -1,0 +1,106 @@
+@model QLKS.ViewModels.AdminEditBookingVM
+@using System.Globalization
+
+@{
+    ViewData["Title"] = "";
+    var vi = CultureInfo.GetCultureInfo("vi-VN");
+    string Money(decimal v) => v.ToString("#,0", vi);
+}
+
+<div class="mgr-wrap invoice-wrap invoice-full booking-wrap crud-page">
+    <div class="mgr-head booking-topbar">
+        <h2 class="booking-heading">
+            <i class="fas fa-edit"></i>
+            <span>Sửa đặt phòng #@Model.Id</span>
+        </h2>
+
+        <div class="rt-top-actions">
+            <a class="btnx" asp-action="Details" asp-route-id="@Model.Id" title="Chi tiết">
+                <i class="fas fa-eye"></i> Chi tiết
+            </a>
+            <a class="btnx" asp-action="Index" title="Quay lại">
+                <i class="fas fa-arrow-left"></i> Quay lại
+            </a>
+        </div>
+    </div>
+
+    <div class="crud-body">
+        <form asp-action="Edit" method="post" class="crud-form" novalidate>
+            @Html.AntiForgeryToken()
+            <input type="hidden" asp-for="Id" />
+            <input type="hidden" asp-for="PhongId" />
+
+            <div asp-validation-summary="ModelOnly" class="valsum"></div>
+
+            <div class="crud-grid">
+                <!-- LEFT -->
+                <div class="crud-card">
+                    <div class="crud-card-hd">
+                        <h3 class="ttl"><i class="fas fa-calendar-alt"></i> Cập nhật ngày</h3>
+                        <span class="hint">Hệ thống sẽ tự tính lại số đêm và tổng tiền</span>
+                    </div>
+
+                    <div class="crud-card-bd">
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label asp-for="NgayNhanPhong" class="form-label">Ngày nhận</label>
+                                <input asp-for="NgayNhanPhong" type="date" class="form-control" />
+                                <span asp-validation-for="NgayNhanPhong" class="text-danger field-err"></span>
+                            </div>
+
+                            <div class="col-md-6">
+                                <label asp-for="NgayTraPhong" class="form-label">Ngày trả</label>
+                                <input asp-for="NgayTraPhong" type="date" class="form-control" />
+                                <span asp-validation-for="NgayTraPhong" class="text-danger field-err"></span>
+                            </div>
+                        </div>
+
+                        <div class="crud-actions">
+                            <button class="btn btn-warning" type="submit">
+                                <i class="fas fa-save me-1"></i> Lưu thay đổi
+                            </button>
+                            <a class="btn btn-outline-secondary" asp-action="Details" asp-route-id="@Model.Id">
+                                <i class="fas fa-times me-1"></i> Hủy
+                            </a>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- RIGHT -->
+                <div class="crud-card">
+                    <div class="crud-card-hd">
+                        <h3 class="ttl"><i class="fas fa-info-circle"></i> Thông tin booking</h3>
+                        <span class="hint">Chỉ xem</span>
+                    </div>
+
+                    <div class="crud-card-bd">
+                        <div class="kv">
+                            <div class="k">Khách</div>
+                            <div class="v">@Model.TenKhach</div>
+
+                            <div class="k">Phòng</div>
+                            <div class="v">@Model.SoPhong</div>
+
+                            <div class="k">Loại phòng</div>
+                            <div class="v">@Model.TenLoaiPhong</div>
+
+                            <div class="k">Giá/đêm</div>
+                            <div class="v">@Money(Model.GiaMoiDem) đ</div>
+                        </div>
+
+                        <div class="sep"></div>
+
+                        <div class="hint">
+                            <i class="fas fa-shield-alt me-1"></i>
+                            Lưu ý: hệ thống sẽ chặn nếu ngày mới bị <b>chồng lịch</b> với booking khác.
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

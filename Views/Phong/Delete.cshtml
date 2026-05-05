@@ -1,0 +1,119 @@
+﻿@model QLKS.Models.Phong
+@using QLKS.Helpers
+@using QLKS.Models
+
+@{
+    ViewData["Title"] = "";
+
+    string pillClass =
+        Model.TrangThai == TrangThaiPhong.Trong ? "pill r-green" :
+        Model.TrangThai == TrangThaiPhong.DangSuDung ? "pill r-blue" :
+        "pill r-yellow";
+}
+
+@section Styles {
+    <link rel="stylesheet" href="~/adminlte/css/admin-room.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/adminlte/css/admin-room-form.css" asp-append-version="true" />
+}
+
+<div class="mgr-wrap invoice-wrap invoice-full room-wrap room-form">
+
+    <div class="mgr-head room-topbar">
+        <h2 class="room-heading">
+            <i class="fas fa-trash"></i>
+            <span>Xóa phòng</span>
+            <span class="pill r-blue" style="margin-left:10px;">@Model.SoPhong</span>
+        </h2>
+
+        <div class="toolbar-right">
+            <a class="btnx" asp-action="Index">
+                <i class="fas fa-arrow-left"></i> Quay lại
+            </a>
+        </div>
+    </div>
+
+    <div class="rf-body">
+        <div class="rf-grid">
+
+            <!-- LEFT: confirm -->
+            <div class="rf-panel">
+                <div class="rf-panel-hd">
+                    <i class="fas fa-exclamation-triangle" style="color:#dc2626;"></i> Xác nhận
+                </div>
+
+                <div class="rf-panel-bd">
+                    <div class="rf-danger">
+                        Mày chắc chắn muốn xóa phòng <b>@Model.SoPhong</b> không?
+                        <div style="margin-top:6px; font-weight:800; color:#7f1d1d;">
+                            Hành động này <b>không thể hoàn tác</b>.
+                        </div>
+                    </div>
+
+                    <div style="margin-top:12px;">
+                        <div class="rf-kv">
+                            <div class="rf-k">ID</div>
+                            <div class="rf-v">#@Model.Id</div>
+                        </div>
+                        <div class="rf-kv">
+                            <div class="rf-k">Tầng</div>
+                            <div class="rf-v">@Model.Tang</div>
+                        </div>
+                        <div class="rf-kv">
+                            <div class="rf-k">Trạng thái</div>
+                            <div class="rf-v"><span class="@pillClass">@Model.TrangThai.GetDisplayName()</span></div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="rf-footer">
+                    <form asp-action="Delete" method="post" class="d-flex gap-2" style="margin:0;">
+                        @Html.AntiForgeryToken()
+                        <input type="hidden" asp-for="Id" />
+
+                        <button type="submit" class="btnx primary" style="background:#dc3545;border-color:#dc3545;">
+                            <i class="fas fa-trash"></i> Xóa luôn
+                        </button>
+                        <a class="btnx" asp-action="Index">Hủy</a>
+                    </form>
+                </div>
+            </div>
+
+            <!-- RIGHT: type info -->
+            <div class="rf-panel">
+                <div class="rf-panel-hd">
+                    <i class="fas fa-layer-group"></i> Loại phòng
+                </div>
+
+                <div class="rf-panel-bd">
+                    <div class="rf-summary-title">Tên loại</div>
+                    <div class="rf-summary-big" style="font-size:18px;">@Model.LoaiPhong?.TenLoai</div>
+
+                    <div class="rf-kv">
+                        <div class="rf-k">Số người</div>
+                        <div class="rf-v">@Model.LoaiPhong?.SoNguoi</div>
+                    </div>
+
+                    <div class="rf-kv">
+                        <div class="rf-k">Giá/đêm</div>
+                        <div class="rf-v">@((Model.LoaiPhong?.GiaMoiDem ?? 0).ToString("N0")) ₫</div>
+                    </div>
+
+                    @if (!string.IsNullOrWhiteSpace(Model.LoaiPhong?.MoTa))
+                    {
+                        <div class="rf-note" style="margin-top:12px; white-space:pre-line;">
+                            @Model.LoaiPhong?.MoTa
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="rf-note" style="margin-top:12px;">
+                            (Chưa có mô tả cho loại phòng này)
+                        </div>
+                    }
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+</div>

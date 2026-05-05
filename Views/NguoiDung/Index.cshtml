@@ -1,0 +1,190 @@
+﻿@model List<QLKS.ViewModels.AdminUserListItemVM>
+@using QLKS.Models
+@using QLKS.Helpers
+@using System.Linq
+
+@{
+    ViewData["Title"] = " ";
+
+    string q = ViewBag.Q as string ?? "";
+    VaiTro? vaiTro = ViewBag.VaiTro == null ? (VaiTro?)null : (VaiTro)ViewBag.VaiTro;
+    bool? trangThai = ViewBag.TrangThai == null ? (bool?)null : (bool)ViewBag.TrangThai;
+
+    // KPI (tính theo danh sách đang hiển thị)
+    var total = Model?.Count ?? 0;
+    var active = Model?.Count(x => x.TrangThai) ?? 0;
+    var locked = total - active;
+
+    var adminCount = Model?.Count(x => x.VaiTro == VaiTro.Admin) ?? 0;
+    var khCount = total - adminCount;
+}
+
+@section Styles {
+    <link rel="stylesheet" href="~/adminlte/css/admin-users.css" asp-append-version="true" />
+}
+
+@if (TempData["msg"] != null)
+{
+    <div class="alert alert-success alert-dismissible fade show" role="alert">
+        @TempData["msg"]
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+}
+
+<div class="mgr-wrap invoice-wrap users-wrap">
+
+    <!-- Head -->
+    <div class="mgr-head">
+        <div class="left">
+            <h2 class="users-heading">
+                <i class="fas fa-users"></i>
+                <span>Quản lý người dùng</span>
+            </h2>
+        </div>
+
+
+        <div class="right">
+            <a class="btnx primary" asp-action="Create" title="Thêm người dùng">
+                <i class="fas fa-plus"></i> Thêm
+            </a>
+        </div>
+    </div>
+
+    <!-- KPI chips -->
+    <div class="mgr-kpis">
+        <span class="chip"><span class="dot" style="background:#212529"></span> Tổng: @total</span>
+        <span class="chip"><span class="dot" style="background:#198754"></span> Hoạt động: @active</span>
+        <span class="chip"><span class="dot" style="background:#dc3545"></span> Bị khoá: @locked</span>
+        <span class="chip"><span class="dot" style="background:#0d6efd"></span> Admin: @adminCount</span>
+        <span class="chip"><span class="dot" style="background:#6c757d"></span> Khách: @khCount</span>
+    </div>
+
+    <!-- Toolbar (lọc server như cũ) -->
+    <form method="get" class="mgr-toolbar">
+        <input class="inv-search users-search"
+               name="q"
+               value="@q"
+               placeholder="Tìm (họ tên / username / sđt / email)..." />
+
+        <select class="inv-select users-select" name="vaiTro" style="width:220px;">
+            <option value="">-- Vai trò --</option>
+            @foreach (var r in Enum.GetValues(typeof(VaiTro)).Cast<VaiTro>())
+            {
+                <option value="@((int)r)" selected="@(vaiTro.HasValue && vaiTro.Value == r ? "selected" : (string?)null)">
+                    @r.GetDisplayName()
+                </option>
+            }
+        </select>
+
+        <select class="inv-select users-select" name="trangThai" style="width:220px;">
+            <option value="">-- Trạng thái --</option>
+            <option value="true" selected="@(trangThai.HasValue && trangThai.Value ? "selected" : (string?)null)">Hoạt động</option>
+            <option value="false" selected="@(trangThai.HasValue && !trangThai.Value ? "selected" : (string?)null)">Bị khoá</option>
+        </select>
+
+        <div class="toolbar-right">
+            <button class="btnx primary" type="submit" title="Lọc">
+                <i class="fas fa-filter"></i> Lọc
+            </button>
+
+            <a class="btnx" asp-action="Index" title="Reset">
+                Reset
+            </a>
+        </div>
+    </form>
+
+    <!-- TABLE -->
+    <div class="mgr-table-scroll">
+        @if (Model == null || Model.Count == 0)
+        {
+            <div class="p-4 text-center text-muted">Không có dữ liệu người dùng.</div>
+        }
+        else
+        {
+            <table class="mgr-table" id="tblUsers">
+                <thead>
+                    <tr>
+                        <th style="width:80px;">ID</th>
+                        <th class="col-info">Thông tin</th>
+                        <th style="width:160px;">Vai trò</th>
+                        <th style="width:140px;">Trạng thái</th>
+                        <th style="width:120px;">Đặt phòng</th>
+                        <th style="width:140px;">Ngày tạo</th>
+                        <th class="col-actions" style="width:230px;">Thao tác</th>
+                    </tr>
+                </thead>
+
+                <tbody>
+                    @foreach (var u in Model)
+                    {
+                        <tr>
+                            <td><b>@u.Id</b></td>
+
+                            <td class="col-info">
+                                <div class="user-cell">
+                                    <div class="user-name">@u.HoTen</div>
+                                    <div class="user-meta">
+                                        <span><i class="fas fa-user"></i>@u.TenDangNhap</span>
+
+                                        @if (!string.IsNullOrWhiteSpace(u.SoDienThoai))
+                                        {
+                                            <span><i class="fas fa-phone"></i>@u.SoDienThoai</span>
+                                        }
+
+                                        @if (!string.IsNullOrWhiteSpace(u.Email))
+                                        {
+                                            <span><i class="fas fa-envelope"></i>@u.Email</span>
+                                        }
+                                    </div>
+                                </div>
+                            </td>
+
+                            <td class="role"><span class="role-pill">@u.VaiTro.GetDisplayName()</span></td>
+
+                            <td>
+                                @if (u.TrangThai)
+                                {
+                                    <span class="pill u-active">Hoạt động</span>
+                                }
+                                else
+                                {
+                                    <span class="pill u-locked">Bị khoá</span>
+                                }
+                            </td>
+
+                            <td><b>@u.SoDatPhong</b></td>
+                            <td>@u.NgayTao.ToString("yyyy-MM-dd")</td>
+
+                            <td class="col-actions">
+                                <div class="actions actions-tight">
+                                    <a class="sqbtn view" asp-action="Details" asp-route-id="@u.Id" title="Chi tiết">
+                                        <i class="fas fa-eye"></i>
+                                    </a>
+
+                                    <a class="sqbtn edit" asp-action="Edit" asp-route-id="@u.Id" title="Sửa">
+                                        <i class="fas fa-edit"></i>
+                                    </a>
+
+                                    <a class="sqbtn key" asp-action="ResetPassword" asp-route-id="@u.Id" title="Đặt lại mật khẩu">
+                                        <i class="fas fa-key"></i>
+                                    </a>
+
+                                    <form asp-action="ToggleStatus" asp-route-id="@u.Id" method="post" class="d-inline m-0">
+                                        @Html.AntiForgeryToken()
+                                        <button type="submit"
+                                                class="sqbtn @(u.TrangThai ? "lock" : "unlock")"
+                                                title="@(u.TrangThai ? "Khoá" : "Mở khoá")"
+                                                onclick="return confirm('Xác nhận thao tác?');">
+                                            <i class="fas @(u.TrangThai ? "fa-lock" : "fa-unlock")"></i>
+                                        </button>
+                                    </form>
+                                </div>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        }
+    </div>
+
+</div>

@@ -1,0 +1,100 @@
+﻿@model QLKS.ViewModels.AdminUserCreateVM
+@using QLKS.Models
+@using QLKS.Helpers
+@{
+    ViewData["Title"] = "Thêm người dùng";
+}
+
+<div class="card card-outline card-primary stretch stretch-full">
+    <div class="card-header">
+        <h3 class="card-title mb-0">
+            <i class="fas fa-user-plus me-2"></i> Thêm người dùng
+        </h3>
+        <div class="card-tools">
+            <a class="btn btn-outline-secondary btn-sm" asp-action="Index">
+                <i class="fas fa-arrow-left me-1"></i> Quay lại
+            </a>
+        </div>
+    </div>
+
+    <div class="card-body">
+        <form asp-action="Create" method="post">
+            @Html.AntiForgeryToken()
+            <div asp-validation-summary="ModelOnly" class="text-danger mb-3"></div>
+
+            <div class="row g-3">
+                <div class="col-md-4">
+                    <label class="form-label">Tên đăng nhập</label>
+                    <input class="form-control" asp-for="TenDangNhap" />
+                    <span class="text-danger" asp-validation-for="TenDangNhap"></span>
+                </div>
+
+                <div class="col-md-8">
+                    <label class="form-label">Họ tên</label>
+                    <input class="form-control" asp-for="HoTen" />
+                    <span class="text-danger" asp-validation-for="HoTen"></span>
+                </div>
+
+                <div class="col-md-4">
+                    <label class="form-label">Số điện thoại</label>
+                    <input class="form-control" asp-for="SoDienThoai" />
+                    <span class="text-danger" asp-validation-for="SoDienThoai"></span>
+                </div>
+
+                <div class="col-md-4">
+                    <label class="form-label">Email</label>
+                    <input class="form-control" asp-for="Email" />
+                    <span class="text-danger" asp-validation-for="Email"></span>
+                </div>
+
+                <div class="col-md-4">
+                    <label class="form-label">CCCD</label>
+                    <input class="form-control" asp-for="CCCD" />
+                    <span class="text-danger" asp-validation-for="CCCD"></span>
+                </div>
+
+                <div class="col-md-4">
+                    <label class="form-label">Vai trò</label>
+                    <select class="form-select" asp-for="VaiTro">
+                        @foreach (var r in Enum.GetValues(typeof(VaiTro)).Cast<VaiTro>())
+                        {
+                            <option value="@r">@r.GetDisplayName()</option>
+                        }
+                    </select>
+                </div>
+
+                <div class="col-md-4 d-flex align-items-end">
+                    <div class="form-check form-switch">
+                        <input class="form-check-input" type="checkbox" asp-for="TrangThai" />
+                        <label class="form-check-label" for="TrangThai">Hoạt động</label>
+                    </div>
+                </div>
+
+                <div class="col-md-4"></div>
+
+                <div class="col-md-4">
+                    <label class="form-label">Mật khẩu</label>
+                    <input class="form-control" asp-for="MatKhau" type="password" />
+                    <span class="text-danger" asp-validation-for="MatKhau"></span>
+                </div>
+
+                <div class="col-md-4">
+                    <label class="form-label">Xác nhận mật khẩu</label>
+                    <input class="form-control" asp-for="XacNhanMatKhau" type="password" />
+                    <span class="text-danger" asp-validation-for="XacNhanMatKhau"></span>
+                </div>
+            </div>
+
+            <div class="mt-4 d-flex gap-2">
+                <button class="btn btn-primary" type="submit">
+                    <i class="fas fa-save me-1"></i> Lưu
+                </button>
+                <a class="btn btn-outline-secondary" asp-action="Index">Huỷ</a>
+            </div>
+        </form>
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

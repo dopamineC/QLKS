@@ -1,0 +1,367 @@
+﻿@model QLKS.ViewModels.TimPhongTrongVM
+@{
+    ViewData["Title"] = "Tìm phòng trống";
+    var hero = Url.Content("~/redplanet/images/hero_5.jpg");
+    var today = DateTime.Today.ToString("yyyy-MM-dd");
+}
+
+@section Styles {
+    <style>
+        /* Fix lệch hàng khi có validation (chữ đỏ): luôn chừa 1 dòng dưới field */
+        .qlks-msg, .qlks-msg-space {
+            display: block;
+            min-height: 18px;
+            margin-top: 6px;
+            line-height: 1.2;
+        }
+
+        .qlks-search-grid {
+            align-items: start;
+        }
+
+        .qlks-search-v2 {
+            width: 100%;
+            background: #fff;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.08); /* Thêm đổ bóng cho form bớt trống */
+        }
+
+        .qlks-search-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1.2fr 0.9fr auto;
+            gap: 18px;
+        }
+
+        @@media (max-width: 992px) {
+            .qlks-search-grid {
+                grid-template-columns: 1fr 1fr;
+            }
+
+            .qlks-search-btnwrap {
+                grid-column: 1 / -1;
+            }
+        }
+
+        .qlks-label {
+            font-weight: 700;
+            color: #374151;
+            margin-bottom: 8px;
+            display: inline-block;
+        }
+
+        .qlks-search-btnwrap .qlks-label {
+            opacity: 0;
+        }
+
+        .qlks-search-btn {
+            height: 44px;
+            padding: 0 22px;
+            border-radius: 8px;
+            border: 0 !important;
+            background: #dc3545 !important; /* Ép màu đỏ đè lên mọi css có sẵn */
+            color: #fff !important;
+            font-weight: 800;
+            min-width: 120px;
+            transition: all 0.3s ease;
+        }
+
+            .qlks-search-btn:hover {
+                background: #a71d2a !important; /* Màu đỏ sậm khi hover */
+                transform: translateY(-2px);
+            }
+
+        /* Hero mini */
+        .site-hero.qlks-hero-mini {
+            height: 62vh !important;
+            min-height: 520px !important;
+        }
+
+            .site-hero.qlks-hero-mini.overlay:before {
+                height: 62vh !important;
+                min-height: 520px !important;
+            }
+
+            .site-hero.qlks-hero-mini .site-hero-inner {
+                height: 62vh !important;
+                min-height: 520px !important;
+            }
+
+        @@media (max-width: 768px) {
+            .site-hero.qlks-hero-mini, .site-hero.qlks-hero-mini.overlay:before, .site-hero.qlks-hero-mini .site-hero-inner {
+                height: 55vh !important;
+                min-height: 420px !important;
+            }
+        }
+
+        @@media (max-width: 576px) {
+            .site-hero.qlks-hero-mini, .site-hero.qlks-hero-mini.overlay:before, .site-hero.qlks-hero-mini .site-hero-inner {
+                height: 50vh !important;
+                min-height: 360px !important;
+            }
+        }
+
+        .section.bg-light.qlks-search-section {
+            padding-bottom: 80px !important;
+        }
+
+            .section.bg-light.qlks-search-section .check-availabilty {
+                margin-top: -120px !important;
+                position: relative;
+                z-index: 10;
+            }
+
+        /* Styling cho phần banner & support thêm vào */
+        .promo-banner {
+            background: linear-gradient(135deg, #dc3545 0%, #a71d2a 100%); /* Chuyển banner sang gradient đỏ */
+            color: white;
+            border-radius: 16px;
+            padding: 40px;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: flex-start;
+            box-shadow: 0 10px 30px rgba(220, 53, 69, 0.2);
+            position: relative;
+            overflow: hidden;
+        }
+
+            .promo-banner::after {
+                content: '';
+                position: absolute;
+                right: -20%;
+                top: -50%;
+                width: 300px;
+                height: 300px;
+                background: rgba(255,255,255,0.1);
+                border-radius: 50%;
+            }
+
+            .promo-banner h3 {
+                color: white;
+                font-weight: 700;
+                margin-bottom: 15px;
+                font-size: 28px;
+            }
+
+            .promo-banner p {
+                font-size: 16px;
+                opacity: 0.9;
+                margin-bottom: 25px;
+                max-width: 80%;
+            }
+
+        .promo-btn {
+            background: #fff;
+            color: #dc3545; /* Text đỏ cho nút banner */
+            font-weight: 700;
+            padding: 10px 24px;
+            border-radius: 30px;
+            text-decoration: none;
+            transition: all 0.3s;
+            display: inline-block;
+        }
+
+            .promo-btn:hover {
+                background: #f8fafc;
+                transform: translateY(-2px);
+                text-decoration: none;
+                color: #a71d2a;
+            }
+
+        .support-box {
+            background: #fff;
+            border: 1px solid #e5e7eb;
+            border-radius: 16px;
+            padding: 40px;
+            text-align: center;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.03);
+            transition: all 0.3s;
+        }
+
+            .support-box:hover {
+                box-shadow: 0 10px 25px rgba(0,0,0,0.08);
+                transform: translateY(-5px);
+            }
+
+        .support-icon {
+            width: 60px;
+            height: 60px;
+            background: #fff5f5; /* Nền đỏ nhạt */
+            color: #dc3545; /* Icon đỏ */
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            margin-bottom: 20px;
+        }
+
+        .support-box h4 {
+            font-weight: 700;
+            color: #1f2937;
+            margin-bottom: 10px;
+        }
+
+        .support-box .hotline {
+            font-size: 28px;
+            font-weight: 800;
+            color: #dc3545; /* Chữ hotline màu đỏ */
+            margin: 0;
+        }
+    </style>
+}
+
+<section class="site-hero overlay qlks-hero-mini" style="background-image: url('@hero')">
+    <div class="container">
+        <div class="row site-hero-inner justify-content-center align-items-center">
+            <div class="col-md-10 text-center">
+                <h1 class="heading mb-3">Tìm phòng trống</h1>
+                <p class="lead text-white-50 mb-0">Chọn ngày nhận/trả, loại phòng và số người để lọc phòng phù hợp.</p>
+            </div>
+        </div>
+    </div>
+</section>
+
+<section class="section bg-light pt-0 qlks-search-section">
+    <div class="container">
+        <!-- KHỐI TÌM KIẾM -->
+        <div class="row check-availabilty">
+            <div class="col-12" data-aos="fade-up" data-aos-offset="-200">
+                <form asp-action="Search" method="post" class="qlks-search-v2" id="qlksSearchForm">
+                    @Html.AntiForgeryToken()
+
+                    <div asp-validation-summary="ModelOnly" class="text-danger mb-2"></div>
+
+                    <div class="qlks-search-grid">
+                        <div class="qlks-search-item">
+                            <label class="qlks-label">Ngày nhận</label>
+                            <input class="form-control" type="date" asp-for="NgayNhan" min="@today" />
+                            <span class="text-danger small qlks-msg" asp-validation-for="NgayNhan"></span>
+                        </div>
+
+                        <div class="qlks-search-item">
+                            <label class="qlks-label">Ngày trả</label>
+                            <input class="form-control" type="date" asp-for="NgayTra" min="@today" />
+                            <span class="text-danger small qlks-msg" asp-validation-for="NgayTra"></span>
+                        </div>
+
+                        <div class="qlks-search-item">
+                            <label class="qlks-label">Loại phòng</label>
+                            <select class="form-control" asp-for="LoaiPhongId" asp-items="ViewBag.LoaiPhongItems">
+                                <option value="">-- Tất cả --</option>
+                            </select>
+                            <span class="qlks-msg-space"></span>
+                        </div>
+
+                        <div class="qlks-search-item">
+                            <label class="qlks-label">Số người</label>
+                            <select class="form-control" asp-for="SoNguoi">
+                                <option value="">-- Bất kỳ --</option>
+                                @for (int i = 1; i <= 10; i++)
+                                {
+                                    <option value="@i">@i</option>
+                                }
+                            </select>
+                            <span class="qlks-msg-space"></span>
+                        </div>
+
+                        <div class="qlks-search-item qlks-search-btnwrap text-md-right text-center">
+                            <label class="qlks-label d-none d-md-block">&nbsp;</label>
+                            <button type="submit" class="qlks-search-btn">Tìm Phòng</button>
+                            <span class="qlks-msg-space"></span>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- KHỐI GIAO DIỆN TĨNH KIỂU MỚI: Asymmetric Layout (Banner + Hỗ trợ) -->
+        <div class="row mt-5 pt-4" data-aos="fade-up" data-aos-delay="100">
+            <!-- Banner Ưu đãi -->
+            <div class="col-lg-8 mb-4">
+                <div class="promo-banner">
+                    <h3>Khám phá kỳ nghỉ tuyệt vời</h3>
+                    <p>Hệ thống phòng ốc hiện đại, tiện nghi sang trọng cùng dịch vụ đẳng cấp. Hãy nhập thông tin ngày lưu trú ở trên để tìm được căn phòng ưng ý nhất cho bạn và gia đình.</p>
+                    <a href="#" class="promo-btn" onclick="event.preventDefault();">Xem thêm dịch vụ</a>
+                </div>
+            </div>
+
+            <!-- Khối Hotline Hỗ trợ -->
+            <div class="col-lg-4 mb-4">
+                <div class="support-box">
+                    <div class="support-icon">
+                        <i class="fa fa-phone"></i>
+                    </div>
+                    <h4>Cần hỗ trợ đặt phòng?</h4>
+                    <p class="text-muted mb-3">Chúng tôi sẵn sàng phục vụ 24/7</p>
+                    <p class="hotline">1900 1234</p>
+                </div>
+            </div>
+        </div>
+
+    </div>
+</section>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+
+    <script>
+        (function () {
+            const inNhan = document.getElementById('NgayNhan');
+            const inTra = document.getElementById('NgayTra');
+            if (!inNhan || !inTra) return;
+
+            // yyyy-MM-dd (LOCAL)
+            const fmt = (d) => {
+                const y = d.getFullYear();
+                const m = String(d.getMonth() + 1).padStart(2, '0');
+                const day = String(d.getDate()).padStart(2, '0');
+                return `${y}-${m}-${day}`;
+            };
+
+            // parse yyyy-MM-dd thành Date local (tránh new Date(str) bị lệch UTC)
+            const parseYMD = (s) => {
+                if (!s) return null;
+                const p = s.split('-').map(Number);
+                if (p.length !== 3) return null;
+                const [y, m, d] = p;
+                if (!y || !m || !d) return null;
+                return new Date(y, m - 1, d);
+            };
+
+            // today lấy theo server để khớp validate backend
+            const today = parseYMD('@today') || new Date();
+            today.setHours(0, 0, 0, 0);
+
+            inNhan.min = fmt(today);
+
+            function syncDates() {
+                let dNhan = parseYMD(inNhan.value);
+                if (!dNhan || dNhan < today) {
+                    dNhan = new Date(today);
+                    inNhan.value = fmt(dNhan);
+                }
+
+                const minTra = new Date(dNhan);
+                minTra.setDate(minTra.getDate() + 1);
+                inTra.min = fmt(minTra);
+
+                let dTra = parseYMD(inTra.value);
+                if (!dTra || dTra <= dNhan) {
+                    inTra.value = fmt(minTra);
+                }
+            }
+
+            inNhan.addEventListener('change', syncDates);
+            inTra.addEventListener('change', syncDates);
+            syncDates();
+        })();
+    </script>
+}

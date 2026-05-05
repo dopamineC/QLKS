@@ -1,0 +1,152 @@
+@model QLKS.ViewModels.AdminCreateBookingVM
+@using QLKS.Models
+
+@{
+    ViewData["Title"] = ""; // tránh title lớn trong layout (nếu có)
+}
+
+<div class="mgr-wrap invoice-wrap invoice-full booking-wrap crud-page">
+    <div class="mgr-head booking-topbar">
+        <h2 class="booking-heading">
+            <i class="fas fa-plus-circle"></i>
+            <span>Tạo đặt phòng</span>
+        </h2>
+
+        <div class="rt-top-actions">
+            <a class="btnx" asp-action="Index" title="Quay lại">
+                <i class="fas fa-arrow-left"></i> Quay lại
+            </a>
+        </div>
+    </div>
+
+    <div class="crud-body">
+        <form asp-action="Create" method="post" class="crud-form" novalidate>
+            @Html.AntiForgeryToken()
+
+            <div asp-validation-summary="ModelOnly" class="valsum"></div>
+
+            <div class="crud-grid">
+                <!-- LEFT: Form -->
+                <div class="crud-card">
+                    <div class="crud-card-hd">
+                        <h3 class="ttl"><i class="fas fa-clipboard-list"></i> Thông tin đặt phòng</h3>
+                        <span class="hint"><i class="fas fa-info-circle me-1"></i> Điền đủ thông tin rồi bấm “Tạo đặt phòng”</span>
+                    </div>
+
+                    <div class="crud-card-bd">
+                        <div class="row g-3">
+                            <div class="col-lg-6">
+                                <label class="form-label">Khách hàng</label>
+                                <select class="form-select" asp-for="KhachHangId" asp-items="ViewBag.Customers">
+                                    <option value="0">-- Chọn khách hàng --</option>
+                                </select>
+                                <span class="text-danger field-err" asp-validation-for="KhachHangId"></span>
+                            </div>
+
+                            <div class="col-lg-6">
+                                <label class="form-label">Phòng</label>
+                                <select class="form-select" asp-for="PhongId" asp-items="ViewBag.Rooms">
+                                    <option value="0">-- Chọn phòng --</option>
+                                </select>
+                                <span class="text-danger field-err" asp-validation-for="PhongId"></span>
+                            </div>
+
+                            <div class="col-md-4">
+                                <label class="form-label">Ngày nhận</label>
+                                <input class="form-control" asp-for="NgayNhan" type="date" />
+                                <span class="text-danger field-err" asp-validation-for="NgayNhan"></span>
+                            </div>
+
+                            <div class="col-md-4">
+                                <label class="form-label">Ngày trả</label>
+                                <input class="form-control" asp-for="NgayTra" type="date" />
+                                <span class="text-danger field-err" asp-validation-for="NgayTra"></span>
+                            </div>
+
+                            <div class="col-md-4">
+                                <label class="form-label">Phương thức thanh toán</label>
+                                <select class="form-select" asp-for="PhuongThuc"
+                                        asp-items="Html.GetEnumSelectList<PhuongThucThanhToan>()"></select>
+                                <span class="hint d-block mt-1">Có thể đổi khi check-out.</span>
+                            </div>
+                        </div>
+
+                        <div class="crud-actions">
+                            <button class="btn btn-primary" type="submit">
+                                <i class="fas fa-check me-1"></i> Tạo đặt phòng
+                            </button>
+                            <a class="btn btn-outline-secondary" asp-action="Index">
+                                <i class="fas fa-times me-1"></i> Hủy
+                            </a>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- RIGHT: Summary -->
+                <div class="crud-card">
+                    <div class="crud-card-hd">
+                        <h3 class="ttl"><i class="fas fa-receipt"></i> Tóm tắt</h3>
+                        <span class="hint" id="soDemHint">—</span>
+                    </div>
+
+                    <div class="crud-card-bd">
+                        <div class="kv">
+                            <div class="k">Số đêm</div>
+                            <div class="v"><span id="soDemPreview">—</span></div>
+
+                            <div class="k">Ghi chú</div>
+                            <div class="v muted">
+                                Sau khi tạo, hệ thống sẽ tự tạo <b>hóa đơn</b> ở trạng thái <b>Chưa thanh toán</b>.
+                            </div>
+                        </div>
+
+                        <div class="sep"></div>
+
+                        <div class="hint">
+                            <i class="fas fa-lightbulb me-1"></i>
+                            Tip: chọn <b>Ngày nhận</b> và <b>Ngày trả</b> trước, rồi chọn phòng để hạn chế lỗi chồng lịch.
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+    <script>
+        (function () {
+            const iNhan = document.querySelector('input[name="NgayNhan"]');
+            const iTra = document.querySelector('input[name="NgayTra"]');
+            const soDemEl = document.getElementById('soDemPreview');
+            const soDemHint = document.getElementById('soDemHint');
+
+            function calc() {
+                if (!iNhan || !iTra) return;
+                const a = iNhan.value ? new Date(iNhan.value) : null;
+                const b = iTra.value ? new Date(iTra.value) : null;
+
+                if (!a || !b || isNaN(a) || isNaN(b)) {
+                    soDemEl.textContent = '—';
+                    soDemHint.textContent = '—';
+                    return;
+                }
+                const diff = Math.round((b - a) / (1000 * 60 * 60 * 24));
+                if (diff > 0) {
+                    soDemEl.textContent = diff.toString();
+                    soDemHint.textContent = '≈ ' + diff + ' đêm';
+                } else {
+                    soDemEl.textContent = '—';
+                    soDemHint.textContent = 'Ngày chưa hợp lệ';
+                }
+            }
+
+            ['change', 'input'].forEach(ev => {
+                iNhan?.addEventListener(ev, calc);
+                iTra?.addEventListener(ev, calc);
+            });
+            calc();
+        })();
+    </script>
+}

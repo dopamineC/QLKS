@@ -1,0 +1,347 @@
+﻿@model List<QLKS.Models.HoaDon>
+@using QLKS.Models
+@using QLKS.Helpers
+@using System.Linq
+
+@{
+    ViewData["Title"] = "";
+
+    string? q = ViewBag.Q as string;
+    string? tuNgay = ViewBag.TuNgay as string;   // yyyy-MM-dd nếu có
+    string? denNgay = ViewBag.DenNgay as string;
+
+    int? stSel = null;
+    int? methodSel = null;
+
+    try { stSel = ViewBag.TrangThai != null ? (int)ViewBag.TrangThai : (int?)null; } catch { }
+    try { methodSel = ViewBag.PhuongThuc != null ? (int)ViewBag.PhuongThuc : (int?)null; } catch { }
+
+    var total = Model?.Count ?? 0;
+    var paid = Model.Count(x => x.TrangThai == TrangThaiHoaDon.DaThanhToan);
+    var unpaid = Model.Count(x => x.TrangThai == TrangThaiHoaDon.ChuaThanhToan);
+    var cancel = Model.Count(x => x.TrangThai == TrangThaiHoaDon.DaHuy);
+    var revenue = Model.Where(x => x.TrangThai == TrangThaiHoaDon.DaThanhToan).Sum(x => x.SoTien);
+}
+
+
+
+
+<div class="mgr-wrap invoice-wrap invoice-full">
+  
+    <!-- Card head: chỉ chip (đỡ lặp tiêu đề) -->
+    <div class="mgr-head invoice-topbar">
+        <h2 class="invoice-heading">
+            <i class="fas fa-file-invoice"></i>
+            <span>Quản lý hóa đơn</span>
+        </h2>
+
+        <div class="mgr-kpis kpis-inline" id="kpiChips">
+            <button type="button" class="chip chip-btn" data-kpi="all" title="Xem tất cả">
+                <span class="dot" style="background:#212529"></span> Tổng: @total
+            </button>
+
+            <button type="button" class="chip chip-btn" data-kpi="paid" title="Lọc: Đã thanh toán">
+                <span class="dot" style="background:#198754"></span> Đã TT: @paid
+            </button>
+
+            <button type="button" class="chip chip-btn" data-kpi="unpaid" title="Lọc: Chưa thanh toán">
+                <span class="dot" style="background:#f0ad00"></span> Chưa TT: @unpaid
+            </button>
+
+            <button type="button" class="chip chip-btn" data-kpi="cancel" title="Lọc: Đã hủy">
+                <span class="dot" style="background:#dc3545"></span> Đã hủy: @cancel
+            </button>
+
+            <button type="button" class="chip chip-btn" data-kpi="paid" title="Lọc hóa đơn đã thanh toán (doanh thu)">
+                <span class="dot" style="background:#0d6efd"></span> Doanh thu: @string.Format("{0:N0}", revenue)
+            </button>
+        </div>
+    </div>
+
+    <!-- Toolbar -->
+    <div class="mgr-toolbar invoice-toolbar">
+        <input id="qFilter" type="text" value="@q" placeholder="Tìm (id/khách/sđt/phòng)..." class="inv-search" />
+
+        <select id="statusFilter" class="inv-select">
+            <option value="">-- Trạng thái --</option>
+            @foreach (var st in Enum.GetValues(typeof(TrangThaiHoaDon)).Cast<TrangThaiHoaDon>())
+            {
+                var v = (int)st;
+                <option value="@v" selected="@(stSel.HasValue && stSel.Value == v ? "selected" : (string?)null)">
+                    @st.GetDisplayName()
+                </option>
+            }
+        </select>
+
+        <select id="methodFilter" class="inv-select">
+            <option value="">-- Phương thức --</option>
+            @foreach (var m in Enum.GetValues(typeof(PhuongThucThanhToan)).Cast<PhuongThucThanhToan>())
+            {
+                var v = (int)m;
+                <option value="@v" selected="@(methodSel.HasValue && methodSel.Value == v ? "selected" : (string?)null)">
+                    @m.GetDisplayName()
+                </option>
+            }
+        </select>
+
+        <input id="fromDate" type="date" value="@tuNgay" class="inv-date" />
+        <input id="toDate" type="date" value="@denNgay" class="inv-date" />
+
+        <div class="toolbar-right">
+            <button class="btnx primary" type="button" id="btnFilter">
+                <i class="fas fa-filter"></i> Lọc
+            </button>
+            <button class="btnx" type="button" id="btnReset">Reset</button>
+        </div>
+    </div>
+
+    <!-- TABLE -->
+    <div class="mgr-table-scroll">
+        <table class="mgr-table" id="tblInvoices">
+            <thead>
+                <tr>
+                    <th style="width:70px;">#</th>
+                    <th style="width:110px;">Đặt phòng</th>
+                    <th class="col-khach">Khách</th>
+                    <th style="width:90px;">Phòng</th>
+                    <th style="width:150px;" class="money">Số tiền</th>
+                    <th style="width:150px;">Trạng thái</th>
+                    <th style="width:160px;">Phương thức</th>
+                    <th style="width:130px;">Ngày TT</th>
+                    <th style="width:220px;" class="col-actions">Thao tác</th>
+                </tr>
+            </thead>
+
+            <tbody>
+                @{
+                    var stt = 0;
+                }
+                @foreach (var hd in Model)
+                {
+                    stt++;
+
+                    var dp = hd.DatPhong;
+                    var kh = dp?.KhachHang;
+                    var phong = dp?.Phong;
+
+                    var searchKey = ($"{hd.Id} {dp?.Id} {kh?.HoTen} {kh?.TenDangNhap} {kh?.SoDienThoai} {phong?.SoPhong}")
+                    .ToLowerInvariant();
+
+                    string pillClass =
+                    hd.TrangThai == TrangThaiHoaDon.DaThanhToan ? "pill p-paid" :
+                    hd.TrangThai == TrangThaiHoaDon.ChuaThanhToan ? "pill p-unpay" :
+                    "pill p-cancel";
+
+                    string ngayTT = hd.NgayThanhToan == null ? "--" : hd.NgayThanhToan.Value.ToString("dd/MM/yyyy");
+
+                    <tr class="invoice-row"
+                        data-id="@hd.Id"
+                        data-money="@hd.SoTien"
+                        data-status="@((int)hd.TrangThai)"
+                        data-method="@((int)hd.PhuongThuc)"
+                        data-date="@(hd.NgayThanhToan?.ToString("yyyy-MM-dd") ?? "")"
+                        data-search="@searchKey">
+
+                        <td>@stt</td>
+                        <td>@(dp?.Id ?? hd.DatPhongId)</td>
+
+                        <td class="col-khach">
+                            <div class="khach-cell">
+                                <div class="khach-name">@kh?.HoTen</div>
+                                <div class="khach-phone">@kh?.SoDienThoai</div>
+                            </div>
+                        </td>
+
+                        <td>@(phong?.SoPhong ?? "-")</td>
+
+                        <td class="money">@string.Format("{0:N0}", hd.SoTien)</td>
+
+                        <td><span class="@pillClass">@hd.TrangThai.GetDisplayName()</span></td>
+
+                        <td>@hd.PhuongThuc.GetDisplayName()</td>
+
+                        <td>@ngayTT</td>
+
+                        <td class="col-actions">
+                            <div class="invoice-actions-grid">
+
+                                <!-- Slot 1: xem -->
+                                <a class="iconbtn" asp-action="Details" asp-route-id="@hd.Id" title="Xem">
+                                    <i class="fas fa-eye"></i>
+                                </a>
+
+                                <!-- Slot 2: Hoàn tác -->
+                                @if (hd.TrangThai == TrangThaiHoaDon.DaThanhToan)
+                                {
+                                    <form asp-action="MarkUnpaid" method="post" class="grid-form">
+                                        @Html.AntiForgeryToken()
+                                        <input type="hidden" name="id" value="@hd.Id" />
+                                        <button class="actbtn warn slot-action" type="submit"
+                                                onclick="return confirm('Hoàn tác về CHƯA thanh toán?');">
+                                            <i class="fas fa-rotate-left"></i> Hoàn tác
+                                        </button>
+                                    </form>
+                                }
+                                else
+                                {
+                                    <span class="slot-empty slot-action">—</span>
+                                }
+
+                                <!-- Slot 3: Hủy -->
+                                @if (hd.TrangThai != TrangThaiHoaDon.DaHuy)
+                                {
+                                    <form asp-action="Cancel" method="post" class="grid-form">
+                                        @Html.AntiForgeryToken()
+                                        <input type="hidden" name="id" value="@hd.Id" />
+                                        <button class="actbtn danger slot-action" type="submit"
+                                                onclick="return confirm('Huỷ hóa đơn này?');">
+                                            <i class="fas fa-ban"></i> Hủy
+                                        </button>
+                                    </form>
+                                }
+                                else
+                                {
+                                    <span class="slot-empty slot-action">—</span>
+                                }
+
+                            </div>
+                        </td>
+
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+
+</div>
+
+<script>
+    (function () {
+        const tbl = document.getElementById('tblInvoices');
+        const tbody = tbl.querySelector('tbody');
+        const rows = Array.from(tbody.querySelectorAll('tr.invoice-row'));
+
+        const qFilter = document.getElementById('qFilter');
+        const statusFilter = document.getElementById('statusFilter');
+        const methodFilter = document.getElementById('methodFilter');
+        const fromDate = document.getElementById('fromDate');
+        const toDate = document.getElementById('toDate');
+
+        const btnReset = document.getElementById('btnReset');
+        const btnFilter = document.getElementById('btnFilter');
+
+        const kpiChips = document.getElementById('kpiChips');
+
+        function parseDate(s) {
+            if (!s) return null;
+            return new Date(s + 'T00:00:00');
+        }
+
+        function getFiltered() {
+            const q = (qFilter.value || '').trim().toLowerCase();
+            const st = statusFilter.value;
+            const m = methodFilter.value;
+            const f = parseDate(fromDate.value);
+            const t = parseDate(toDate.value);
+
+            let filtered = rows.filter(r => {
+                if (q) {
+                    const hay = (r.getAttribute('data-search') || '');
+                    if (!hay.includes(q)) return false;
+                }
+                if (st) {
+                    if (String(r.getAttribute('data-status')) !== String(st)) return false;
+                }
+                if (m) {
+                    if (String(r.getAttribute('data-method')) !== String(m)) return false;
+                }
+                if (f || t) {
+                    const dStr = r.getAttribute('data-date');
+                    if (!dStr) return false;
+                    const d = parseDate(dStr);
+                    if (f && d < f) return false;
+                    if (t && d > t) return false;
+                }
+                return true;
+            });
+
+            // mặc định: mới nhất trước
+            filtered.sort((a, b) => {
+                const ida = parseInt(a.getAttribute('data-id') || '0', 10);
+                const idb = parseInt(b.getAttribute('data-id') || '0', 10);
+                return idb - ida;
+            });
+
+            return filtered;
+        }
+
+        function render() {
+            const filtered = getFiltered();
+
+            rows.forEach(r => r.style.display = 'none');
+
+            filtered.forEach(r => {
+                r.style.display = '';
+                tbody.appendChild(r);
+            });
+
+            // reindex cột #
+            let idx = 1;
+            rows.forEach(r => {
+                if (r.style.display !== 'none') {
+                    r.children[0].textContent = idx++;
+                }
+            });
+        }
+
+        function resetAll() {
+            qFilter.value = '';
+            statusFilter.value = '';
+            methodFilter.value = '';
+            fromDate.value = '';
+            toDate.value = '';
+            render();
+        }
+
+        // events
+        qFilter.addEventListener('input', render);
+        statusFilter.addEventListener('change', render);
+        methodFilter.addEventListener('change', render);
+        fromDate.addEventListener('change', render);
+        toDate.addEventListener('change', render);
+
+        btnFilter.addEventListener('click', render);
+        btnReset.addEventListener('click', resetAll);
+
+        // chip click filter nhanh
+        if (kpiChips) {
+            kpiChips.addEventListener('click', (e) => {
+                const btn = e.target.closest('.chip-btn');
+                if (!btn) return;
+
+                const k = btn.getAttribute('data-kpi');
+                if (!k || k === 'all') {
+                    statusFilter.value = '';
+                    render();
+                    return;
+                }
+
+                // set status theo data-status của row có pill tương ứng (an toàn theo enum dự án)
+                const findStatusValue = (want) => {
+                    for (const r of rows) {
+                        const s = String(r.getAttribute('data-status') || '');
+                        if (want === 'paid' && r.querySelector('.p-paid')) return s;
+                        if (want === 'unpaid' && r.querySelector('.p-unpay')) return s;
+                        if (want === 'cancel' && r.querySelector('.p-cancel')) return s;
+                    }
+                    return '';
+                };
+
+                statusFilter.value = findStatusValue(k);
+                render();
+            });
+        }
+
+        render();
+    })();
+</script>

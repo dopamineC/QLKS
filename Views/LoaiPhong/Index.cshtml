@@ -1,0 +1,340 @@
+﻿@model List<QLKS.Models.LoaiPhong>
+@using QLKS.Models
+@using System.Linq
+
+@{
+    // để khỏi hiện cái tiêu đề to ở trên (giống Hóa đơn)
+    ViewData["Title"] = "";
+
+    string? q = ViewBag.Q as string;
+
+    var total = Model?.Count ?? 0;
+    var c1 = Model.Count(x => x.SoNguoi <= 1);
+    var c2 = Model.Count(x => x.SoNguoi == 2);
+    var c3p = Model.Count(x => x.SoNguoi >= 3);
+
+    decimal avgPrice = 0;
+    if (total > 0) avgPrice = (decimal)Model.Average(x => (double)x.GiaMoiDem);
+}
+
+@section Styles {
+    <link rel="stylesheet" href="~/adminlte/css/admin-roomtype.css" asp-append-version="true" />
+}
+
+<div class="mgr-wrap invoice-wrap invoice-full type-wrap">
+
+    <!-- TOPBAR + KPI CHIPS -->
+    <div class="mgr-head invoice-topbar">
+        <h2 class="invoice-heading">
+            <i class="fas fa-layer-group"></i>
+            <span>Quản lý loại phòng</span>
+        </h2>
+
+        <div class="mgr-kpis kpis-inline" id="kpiChips">
+            <button type="button" class="chip chip-btn" data-kpi="all" title="Xem tất cả">
+                <span class="dot" style="background:#212529"></span> Tổng: @total
+            </button>
+
+            <button type="button" class="chip chip-btn" data-kpi="cap" data-cap="1" title="Lọc: 1 người">
+                <span class="dot" style="background:#0d6efd"></span> 1 người: @c1
+            </button>
+
+            <button type="button" class="chip chip-btn" data-kpi="cap" data-cap="2" title="Lọc: 2 người">
+                <span class="dot" style="background:#198754"></span> 2 người: @c2
+            </button>
+
+            <button type="button" class="chip chip-btn" data-kpi="cap" data-cap="3" title="Lọc: 3+ người">
+                <span class="dot" style="background:#f0ad00"></span> 3+ người: @c3p
+            </button>
+
+            <button type="button" class="chip" title="Giá trung bình">
+                <span class="dot" style="background:#6f42c1"></span> Giá TB: @string.Format("{0:N0}", avgPrice)
+            </button>
+        </div>
+    </div>
+
+    <!-- TOOLBAR -->
+    <div class="mgr-toolbar invoice-toolbar">
+
+        <select id="pageSize" class="inv-select inv-mini" title="Hiển thị">
+            <option value="999999" selected>Hiển thị tất cả</option>
+            <option value="10">Hiển thị 10</option>
+            <option value="25">Hiển thị 25</option>
+            <option value="50">Hiển thị 50</option>
+            <option value="100">Hiển thị 100</option>
+        </select>
+
+        <input id="qFilter" type="text" value="@q" placeholder="Tìm (tên loại / mô tả)..." class="inv-search" />
+
+        <select id="capFilter" class="inv-select" title="Số người">
+            <option value="">-- Số người --</option>
+            <option value="1">1 người</option>
+            <option value="2">2 người</option>
+            <option value="3">3+ người</option>
+        </select>
+
+        <input id="minPrice" type="number" class="inv-date" placeholder="Giá từ" min="0" step="10000" />
+        <input id="maxPrice" type="number" class="inv-date" placeholder="Giá đến" min="0" step="10000" />
+
+        <select id="sortBy" class="inv-select inv-sort" title="Sắp xếp">
+            <option value="name_asc" selected>Tên A→Z</option>
+            <option value="name_desc">Tên Z→A</option>
+            <option value="cap_asc">Số người ít→nhiều</option>
+            <option value="cap_desc">Số người nhiều→ít</option>
+            <option value="price_asc">Giá thấp→cao</option>
+            <option value="price_desc">Giá cao→thấp</option>
+        </select>
+
+        <div class="muted" id="resultInfo"></div>
+
+        <div class="toolbar-right">
+            <a class="btnx primary" asp-action="Create" title="Thêm loại phòng">
+                <i class="fas fa-plus"></i> Thêm loại
+            </a>
+
+            <button class="btnx primary" type="button" id="btnFilter">
+                <i class="fas fa-filter"></i> Lọc
+            </button>
+
+            <button class="btnx" type="button" id="btnReset">Reset</button>
+        </div>
+    </div>
+
+    <!-- TABLE -->
+    <div class="mgr-table-scroll">
+        <table class="mgr-table" id="tblTypes">
+            <thead>
+                <tr>
+                    <th style="width:70px;">#</th>
+                    <th style="width:140px;">Ảnh</th>
+                    <th class="col-info">Thông tin</th>
+                    <th style="width:120px;">Số người</th>
+                    <th style="width:160px;" class="money">Giá/đêm</th>
+                    <th style="width:170px;" class="col-actions">Thao tác</th>
+                </tr>
+            </thead>
+
+            <tbody>
+                @{
+                    var stt = 0;
+                }
+
+                @if (Model == null || !Model.Any())
+                {
+                    <tr>
+                        <td colspan="6" style="padding:18px; font-weight:800; color:#666; text-align:center;">
+                            Chưa có dữ liệu
+                        </td>
+                    </tr>
+                }
+                else
+                {
+                    foreach (var x in Model)
+                    {
+                        stt++;
+
+                        var img = string.IsNullOrWhiteSpace(x.HinhAnh)
+                        ? Url.Content("~/adminlte/assets/img/default-150x150.png")
+                        : x.HinhAnh;
+
+                        var searchKey = ($"{x.TenLoai} {x.MoTa} {x.SoNguoi} {x.GiaMoiDem}")
+                        .ToLowerInvariant();
+
+                        <tr class="type-row"
+                            data-id="@x.Id"
+                            data-cap="@x.SoNguoi"
+                            data-price="@x.GiaMoiDem"
+                            data-name="@x.TenLoai"
+                            data-search="@searchKey">
+                            <td>@stt</td>
+
+                            <td>
+                                <img src="@img" class="type-thumb" alt="@x.TenLoai" />
+                            </td>
+
+                            <td class="col-info">
+                                <div class="type-cell">
+                                    <div class="type-name">@x.TenLoai</div>
+
+                                    @if (!string.IsNullOrWhiteSpace(x.MoTa))
+                                    {
+                                        <div class="type-desc">@x.MoTa</div>
+                                    }
+                                    else
+                                    {
+                                        <div class="type-desc empty">—</div>
+                                    }
+                                </div>
+                            </td>
+
+                            <td>
+                                <span class="pill p-cap">@x.SoNguoi người</span>
+                            </td>
+
+                            <td class="money">@string.Format("{0:N0}", x.GiaMoiDem)</td>
+
+                            <td class="col-actions">
+                                <div class="type-actions-grid">
+                                    <a class="iconbtn" asp-action="Details" asp-route-id="@x.Id" title="Xem">
+                                        <i class="fas fa-eye"></i>
+                                    </a>
+                                    <a class="iconbtn i-edit" asp-action="Edit" asp-route-id="@x.Id" title="Sửa">
+                                        <i class="fas fa-pen"></i>
+                                    </a>
+                                    <a class="iconbtn i-del" asp-action="Delete" asp-route-id="@x.Id" title="Xóa">
+                                        <i class="fas fa-trash"></i>
+                                    </a>
+                                </div>
+                            </td>
+                        </tr>
+                    }
+                }
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<script>
+    (function () {
+        const tbl = document.getElementById('tblTypes');
+        const tbody = tbl.querySelector('tbody');
+        const rows = Array.from(tbody.querySelectorAll('tr.type-row'));
+
+        const pageSizeSel = document.getElementById('pageSize');
+        const qFilter = document.getElementById('qFilter');
+        const capFilter = document.getElementById('capFilter');
+        const minPrice = document.getElementById('minPrice');
+        const maxPrice = document.getElementById('maxPrice');
+        const sortBy = document.getElementById('sortBy');
+
+        const btnFilter = document.getElementById('btnFilter');
+        const btnReset = document.getElementById('btnReset');
+        const kpiChips = document.getElementById('kpiChips');
+        const resultInfo = document.getElementById('resultInfo');
+
+        function toNum(v) {
+            const n = parseFloat(String(v ?? '').replace(',', '.'));
+            return isNaN(n) ? 0 : n;
+        }
+
+        function getFiltered() {
+            const q = (qFilter.value || '').trim().toLowerCase();
+            const cap = capFilter.value;     // "" | "1" | "2" | "3"
+            const minP = toNum(minPrice.value);
+            const maxP = toNum(maxPrice.value);
+
+            let filtered = rows.filter(r => {
+                if (q) {
+                    const hay = (r.getAttribute('data-search') || '');
+                    if (!hay.includes(q)) return false;
+                }
+
+                if (cap) {
+                    const c = toNum(r.getAttribute('data-cap'));
+                    if (cap === '1' && c !== 1) return false;
+                    if (cap === '2' && c !== 2) return false;
+                    if (cap === '3' && c < 3) return false;
+                }
+
+                const price = toNum(r.getAttribute('data-price'));
+                if (minPrice.value && price < minP) return false;
+                if (maxPrice.value && price > maxP) return false;
+
+                return true;
+            });
+
+            // sort
+            const s = sortBy.value || 'name_asc';
+            filtered.sort((a, b) => {
+                const nameA = (a.getAttribute('data-name') || '').toLowerCase();
+                const nameB = (b.getAttribute('data-name') || '').toLowerCase();
+                const capA = toNum(a.getAttribute('data-cap'));
+                const capB = toNum(b.getAttribute('data-cap'));
+                const priceA = toNum(a.getAttribute('data-price'));
+                const priceB = toNum(b.getAttribute('data-price'));
+
+                if (s === 'name_desc') return nameA < nameB ? 1 : (nameA > nameB ? -1 : 0);
+                if (s === 'cap_asc') return capA - capB;
+                if (s === 'cap_desc') return capB - capA;
+                if (s === 'price_asc') return priceA - priceB;
+                if (s === 'price_desc') return priceB - priceA;
+
+                // default name_asc
+                return nameA > nameB ? 1 : (nameA < nameB ? -1 : 0);
+            });
+
+            return filtered;
+        }
+
+        function render() {
+            const filtered = getFiltered();
+            const pageSize = parseInt(pageSizeSel.value || '999999', 10);
+
+            const showRows = (pageSize >= 999999)
+                ? filtered
+                : filtered.slice(0, Math.min(pageSize, filtered.length));
+
+            rows.forEach(r => r.style.display = 'none');
+
+            showRows.forEach(r => {
+                r.style.display = '';
+                tbody.appendChild(r);
+            });
+
+            // reindex
+            let idx = 1;
+            rows.forEach(r => {
+                if (r.style.display !== 'none') {
+                    r.children[0].textContent = idx++;
+                }
+            });
+
+            if (resultInfo) {
+                resultInfo.textContent = `Đang hiển thị: ${showRows.length}/${filtered.length}`;
+            }
+        }
+
+        function resetAll() {
+            qFilter.value = '';
+            capFilter.value = '';
+            minPrice.value = '';
+            maxPrice.value = '';
+            sortBy.value = 'name_asc';
+            pageSizeSel.value = '999999';
+            render();
+        }
+
+        // events
+        btnFilter.addEventListener('click', render);
+        btnReset.addEventListener('click', resetAll);
+
+        qFilter.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') { e.preventDefault(); render(); }
+        });
+
+        pageSizeSel.addEventListener('change', render);
+
+        // chip quick filter
+        if (kpiChips) {
+            kpiChips.addEventListener('click', (e) => {
+                const btn = e.target.closest('.chip-btn');
+                if (!btn) return;
+
+                const k = btn.getAttribute('data-kpi');
+                if (k === 'all') {
+                    capFilter.value = '';
+                    render();
+                    return;
+                }
+
+                if (k === 'cap') {
+                    const cap = btn.getAttribute('data-cap') || '';
+                    capFilter.value = cap;
+                    render();
+                }
+            });
+        }
+
+        render();
+    })();
+</script>

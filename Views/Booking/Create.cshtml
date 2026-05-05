@@ -1,0 +1,107 @@
+@using QLKS.Models
+@{
+    ViewData["Title"] = "Xác nhận đặt phòng";
+
+    var room = ViewBag.Room as Phong;
+    DateTime ngayNhan = ViewBag.NgayNhan;
+    DateTime ngayTra = ViewBag.NgayTra;
+    int soDem = ViewBag.SoDem;
+    decimal tongTien = ViewBag.TongTien;
+
+    var img = !string.IsNullOrWhiteSpace(room?.LoaiPhong?.HinhAnh)
+        ? Url.Content(room!.LoaiPhong!.HinhAnh)
+        : Url.Content("~/redplanet/images/img_1.jpg");
+}
+
+<section class="site-hero overlay qlks-hero-mini" style="background-image: url('@img')">
+    <div class="container">
+        <div class="row site-hero-inner justify-content-center align-items-center">
+            <div class="col-md-10 text-center">
+                <h1 class="heading mb-3">Xác nhận đặt phòng</h1>
+                <p class="lead text-white-50 mb-0">Kiểm tra lại thông tin trước khi xác nhận.</p>
+            </div>
+        </div>
+    </div>
+</section>
+
+<section class="section bg-light">
+    <div class="container">
+        @if (room == null)
+        {
+            <div class="alert alert-danger">Không tìm thấy phòng.</div>
+            <a class="btn btn-primary" asp-action="Search">Quay lại tìm phòng</a>
+        }
+        else
+        {
+            <div class="row">
+                <div class="col-lg-7 mb-4" data-aos="fade-up">
+                    <div class="qlks-card p-3 p-md-4">
+                        <img src="@img" class="img-fluid rounded mb-3" alt="Ảnh phòng"
+                             style="width:100%; height:360px; object-fit:cover;" />
+
+                        <h3 class="mb-2">Phòng @room.SoPhong</h3>
+                        <div class="text-muted mb-3">
+                            @room.LoaiPhong?.TenLoai · @room.LoaiPhong?.SoNguoi người
+                        </div>
+
+                        @if (!string.IsNullOrWhiteSpace(room.LoaiPhong?.MoTa))
+                        {
+                            <div class="mb-3">@room.LoaiPhong?.MoTa</div>
+                        }
+                        else
+                        {
+                            <div class="text-muted">Chưa có mô tả cho loại phòng này.</div>
+                        }
+
+                        <div class="qlks-meta mt-3">
+                            <span class="qlks-chip">@ngayNhan.ToString("dd/MM/yyyy")</span>
+                            <span class="qlks-chip">@ngayTra.ToString("dd/MM/yyyy")</span>
+                            <span class="qlks-chip">@soDem đêm</span>
+                        </div>
+
+                        <div class="mt-3">
+                            <a class="btn btn-outline-secondary" asp-action="Search">
+                                Quay lại chọn phòng
+                            </a>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-lg-5" data-aos="fade-up" data-aos-delay="100">
+                    <div class="qlks-card p-4">
+                        <h4 class="mb-3">Tóm tắt</h4>
+
+                        <div class="d-flex justify-content-between py-2 border-bottom">
+                            <span class="text-muted">Giá / đêm</span>
+                            <b>@string.Format("{0:N0}", room.LoaiPhong?.GiaMoiDem) VND</b>
+                        </div>
+
+                        <div class="d-flex justify-content-between py-2 border-bottom">
+                            <span class="text-muted">Số đêm</span>
+                            <b>@soDem</b>
+                        </div>
+
+                        <div class="d-flex justify-content-between py-3">
+                            <span class="text-muted">Tổng tiền</span>
+                            <span class="qlks-price">@string.Format("{0:N0}", tongTien) VND</span>
+                        </div>
+
+                        <div class="alert alert-light border rounded">
+                            Sau khi xác nhận, hệ thống sẽ tạo booking và hóa đơn (chờ thanh toán).
+                        </div>
+
+                        <form asp-action="CreateConfirm" method="post" class="mt-3">
+                            @Html.AntiForgeryToken()
+                            <input type="hidden" name="phongId" value="@room.Id" />
+                            <input type="hidden" name="ngayNhan" value="@ngayNhan.ToString("yyyy-MM-dd")" />
+                            <input type="hidden" name="ngayTra" value="@ngayTra.ToString("yyyy-MM-dd")" />
+
+                            <button class="btn btn-success btn-block btn-lg">Xác nhận đặt phòng</button>
+                            <a class="btn btn-outline-secondary btn-block" asp-action="Search">Chọn lại</a>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        }
+    </div>
+</section>

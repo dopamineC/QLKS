@@ -1,0 +1,117 @@
+﻿@model QLKS.Models.LoaiPhong
+
+@{
+    ViewData["Title"] = "";
+    var placeholder = Url.Content("~/adminlte/assets/img/default-150x150.png");
+    var img = string.IsNullOrWhiteSpace(Model.HinhAnh) ? placeholder : Model.HinhAnh;
+}
+
+@section Styles {
+    <link rel="stylesheet" href="~/adminlte/css/admin-roomtype.css" asp-append-version="true" />
+}
+
+<div class="mgr-wrap invoice-wrap invoice-full type-wrap type-form">
+
+    <div class="mgr-head invoice-topbar">
+        <h2 class="invoice-heading">
+            <i class="fas fa-trash"></i>
+            <span>Xóa loại phòng</span>
+        </h2>
+
+        <div class="rt-top-actions">
+            <a class="btnx" asp-action="Index">
+                <i class="fas fa-arrow-left"></i> Quay lại
+            </a>
+        </div>
+    </div>
+
+    <div class="rt-body">
+
+        <div class="rt-danger">
+            Xác nhận xóa loại phòng: <b>@Model.TenLoai</b>
+            <div class="sub">Hành động này không thể hoàn tác.</div>
+        </div>
+
+        <div class="rt-grid">
+
+            <!-- LEFT: Summary -->
+            <div class="rt-panel">
+                <div class="rt-panel-hd">
+                    <div class="rt-panel-title">
+                        <i class="fas fa-info-circle"></i> Thông tin sẽ bị xóa
+                    </div>
+                </div>
+
+                <div class="rt-panel-bd">
+                    <div class="rt-kv">
+                        <div class="rt-k">Tên loại</div>
+                        <div class="rt-v">@Model.TenLoai</div>
+                    </div>
+
+                    <div class="rt-kv">
+                        <div class="rt-k">Số người</div>
+                        <div class="rt-v"><span class="pill p-cap">@Model.SoNguoi người</span></div>
+                    </div>
+
+                    <div class="rt-kv">
+                        <div class="rt-k">Giá/đêm</div>
+                        <div class="rt-v"><span class="pill" style="background:#fff7ed;color:#9a3412;">@Model.GiaMoiDem.ToString("N0") ₫</span></div>
+                    </div>
+
+                    <div class="rt-kv" style="padding-bottom:0;">
+                        <div class="rt-k">Mô tả</div>
+                        <div class="rt-v">
+                            <div class="rt-descbox">
+                                @(string.IsNullOrWhiteSpace(Model.MoTa) ? "—" : Model.MoTa)
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="rt-footer">
+                    <form asp-action="Delete" method="post" class="d-flex gap-2" style="margin-left:auto;">
+                        @Html.AntiForgeryToken()
+                        <input type="hidden" asp-for="Id" />
+                        <button type="submit" class="btnx danger">
+                            <i class="fas fa-trash"></i> Xóa luôn
+                        </button>
+                        <a class="btnx" asp-action="Index">Hủy</a>
+                    </form>
+                </div>
+            </div>
+
+            <!-- RIGHT: Image -->
+            <div class="rt-panel">
+                <div class="rt-panel-hd">
+                    <div class="rt-panel-title">
+                        <i class="fas fa-image"></i> Hình ảnh
+                    </div>
+                </div>
+
+                <div class="rt-panel-bd">
+                    <div class="rt-preview">
+                        <img src="@img" alt="@Model.TenLoai" />
+                        <div class="rt-preview-cap">
+                            <span>Xem ảnh</span>
+                            <small>click ảnh để mở</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        (function () {
+            const img = document.querySelector(".rt-preview img");
+            if (!img) return;
+            img.addEventListener("click", function () {
+                window.open(img.src, "_blank");
+            });
+        })();
+    </script>
+}
